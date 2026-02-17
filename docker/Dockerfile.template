@@ -1,0 +1,78 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                      DOCKERFILE TEMPLATE FOR MICROSERVICES                   ║
+# ╠══════════════════════════════════════════════════════════════════════════════╣
+# ║  WHY THIS FILE EXISTS:                                                       ║
+# ║  Template Dockerfile for building microservice images.                       ║
+# ║                                                                              ║
+# ║  HOW TO USE:                                                                 ║
+# ║  1. Copy this file to each microservice directory                            ║
+# ║  2. Update JAR_FILE and APP_NAME for each service                            ║
+# ║  3. Build with: docker build -t service-name .                               ║
+# ║                                                                              ║
+# ║  Students: Understand each layer and its purpose.                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 1: Build Stage
+# WHY multi-stage: Keeps final image small (no build tools)
+# ═══════════════════════════════════════════════════════════════════════════════
+FROM maven:3.9-eclipse-temurin-17 AS build
+
+WORKDIR /app
+
+# Copy parent pom first (for dependency caching)
+COPY pom.xml .
+COPY discovery-service/pom.xml ./discovery-service/
+COPY gateway-service/pom.xml ./gateway-service/
+COPY auth-service/pom.xml ./auth-service/
+COPY patient-service/pom.xml ./patient-service/
+COPY staff-service/pom.xml ./staff-service/
+COPY appointment-service/pom.xml ./appointment-service/
+COPY medical-record-service/pom.xml ./medical-record-service/
+
+# Download dependencies (cached if pom files unchanged)
+RUN mvn dependency:go-offline -B
+
+# Copy source code
+COPY . .
+
+# Build the specific service
+# Replace ${SERVICE_NAME} with actual service name
+ARG SERVICE_NAME
+RUN mvn clean package -pl ${SERVICE_NAME} -am -DskipTests
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 2: Runtime Stage
+# WHY slim image: Only includes JRE, not full JDK
+# ═══════════════════════════════════════════════════════════════════════════════
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+
+# Create non-root user for security
+# WHY: Never run containers as root in production
+RUN addgroup -S spring && adduser -S spring -G spring
+
+# Copy the built JAR
+ARG SERVICE_NAME
+COPY --from=build /app/${SERVICE_NAME}/target/*.jar app.jar
+
+# Switch to non-root user
+USER spring:spring
+
+# Expose the service port (override in docker-compose)
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
+
+# Run the application
+# WHY these JVM options:
+# -Djava.security.egd: Faster startup on Linux
+# -XX:+UseContainerSupport: Respect container memory limits
+ENTRYPOINT ["java", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-XX:+UseContainerSupport", \
+  "-jar", "app.jar"]
+

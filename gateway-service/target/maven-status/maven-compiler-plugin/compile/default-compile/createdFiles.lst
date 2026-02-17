@@ -1,0 +1,3 @@
+com\hospital\gateway\config\GatewayConfig.class
+com\hospital\gateway\GatewayServiceApplication.class
+com\hospital\gateway\filter\AuthenticationFilter.class

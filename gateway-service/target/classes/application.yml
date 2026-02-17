@@ -1,0 +1,97 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# API GATEWAY CONFIGURATION - KIT COMMUN
+# ═══════════════════════════════════════════════════════════════════════════════
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+
+  cloud:
+    gateway:
+      routes:
+        # AUTH SERVICE - Authentification JWT
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=0
+
+        # PATIENT SERVICE - Gestion des patients
+        - id: patient-service
+          uri: lb://patient-service
+          predicates:
+            - Path=/api/patients/**
+          filters:
+            - StripPrefix=0
+
+        # STAFF SERVICE - Users & Roles
+        - id: staff-service
+          uri: lb://staff-service
+          predicates:
+            - Path=/api/staff/**
+          filters:
+            - StripPrefix=0
+
+        # APPOINTMENT SERVICE - Rendez-vous
+        - id: appointment-service
+          uri: lb://appointment-service
+          predicates:
+            - Path=/api/appointments/**
+          filters:
+            - StripPrefix=0
+
+        # MEDICAL RECORD SERVICE - Dossiers médicaux
+        - id: medical-record-service
+          uri: lb://medical-record-service
+          predicates:
+            - Path=/api/medical-records/**
+          filters:
+            - StripPrefix=0
+
+        # CONSULTATIONS SERVICE - Consultations médicales
+        - id: consultations-service
+          uri: lb://consultations-service
+          predicates:
+            - Path=/api/consultations/**
+          filters:
+            - StripPrefix=0
+
+      # CORS Configuration
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/

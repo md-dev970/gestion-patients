@@ -1,0 +1,47 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# DISCOVERY SERVICE CONFIGURATION (Eureka Server)
+# ═══════════════════════════════════════════════════════════════════════════════
+# WHY: This file configures the Eureka Server behavior.
+# Students: Understand each property before modifying.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+server:
+  port: 8761  # Standard port for Eureka Server
+
+spring:
+  application:
+    name: discovery-service  # Service identifier in the registry
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EUREKA SERVER CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════════════
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    # WHY register-with-eureka: false?
+    # This IS the Eureka server - it doesn't need to register with itself
+    register-with-eureka: false
+    
+    # WHY fetch-registry: false?
+    # As the server, it doesn't need to fetch the registry from anywhere
+    fetch-registry: false
+    
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+
+  server:
+    # WHY wait-time-in-ms-when-sync-empty: 0?
+    # Speeds up initial startup for development. In production, use default.
+    wait-time-in-ms-when-sync-empty: 0
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LOGGING CONFIGURATION
+# Students: Adjust levels during debugging
+# ═══════════════════════════════════════════════════════════════════════════════
+logging:
+  level:
+    root: INFO
+    com.netflix.eureka: INFO
+    com.netflix.discovery: INFO
+

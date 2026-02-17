@@ -1,0 +1,54 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# APPOINTMENT SERVICE CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+server:
+  port: 8083
+
+spring:
+  application:
+    name: appointment-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/hospital_appointments
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FEIGN CLIENT CONFIGURATION
+# WHY: Configures how this service calls other microservices
+# ═══════════════════════════════════════════════════════════════════════════════
+feign:
+  circuitbreaker:
+    enabled: true  # Enable fallbacks
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  level:
+    root: INFO
+    com.hospital.appointment: DEBUG
+

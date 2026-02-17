@@ -1,0 +1,74 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# PATIENT SERVICE CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════════════
+# WHY: Configures the Patient microservice settings.
+# Students: Modify database settings for your environment.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+server:
+  port: 8081  # Each microservice runs on a different port
+
+spring:
+  application:
+    name: patient-service  # This name is used for Eureka registration
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # DATABASE CONFIGURATION
+  # WHY: Each microservice has its OWN database (database per service pattern)
+  # Students: Update credentials for your environment
+  # ═══════════════════════════════════════════════════════════════════════════
+  datasource:
+    url: jdbc:postgresql://localhost:5432/hospital_patients
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JPA/HIBERNATE CONFIGURATION
+  # ═══════════════════════════════════════════════════════════════════════════
+  jpa:
+    hibernate:
+      # WHY update: Auto-creates/updates tables. Use 'validate' in production.
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EUREKA CLIENT CONFIGURATION
+# WHY: Registers this service with the discovery server
+# ═══════════════════════════════════════════════════════════════════════════════
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ACTUATOR CONFIGURATION
+# WHY: Exposes health endpoints for monitoring and orchestration
+# ═══════════════════════════════════════════════════════════════════════════════
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LOGGING CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════════════
+logging:
+  level:
+    root: INFO
+    com.hospital.patient: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+

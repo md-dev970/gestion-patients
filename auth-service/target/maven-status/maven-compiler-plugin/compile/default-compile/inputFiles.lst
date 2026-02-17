@@ -1,0 +1,13 @@
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\service\JwtService.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\controller\AuthController.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\repository\UserRepository.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\dto\RegisterRequest.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\dto\LoginRequest.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\config\SecurityConfig.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\dto\AuthResponse.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\model\Role.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\AuthServiceApplication.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\config\OpenApiConfig.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\model\User.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\service\impl\AuthServiceImpl.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\service\AuthService.java

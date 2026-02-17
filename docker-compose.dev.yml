@@ -1,0 +1,111 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# DOCKER COMPOSE - DÉVELOPPEMENT LOCAL
+# ═══════════════════════════════════════════════════════════════════════════════
+# Lance uniquement les bases de données PostgreSQL.
+# Les microservices sont lancés manuellement via Maven (mvn spring-boot:run)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+version: '3.8'
+
+services:
+  # Base de données pour le service Patients
+  postgres-patients:
+    image: postgres:15-alpine
+    container_name: postgres-patients-dev
+    environment:
+      POSTGRES_DB: hospital_patients
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-patients-dev:/var/lib/postgresql/data
+    networks:
+      - hospital-dev
+
+  # Base de données pour le service Staff/Users
+  postgres-staff:
+    image: postgres:15-alpine
+    container_name: postgres-staff-dev
+    environment:
+      POSTGRES_DB: hospital_staff
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-staff-dev:/var/lib/postgresql/data
+    networks:
+      - hospital-dev
+
+  # Base de données pour le service Appointments
+  postgres-appointments:
+    image: postgres:15-alpine
+    container_name: postgres-appointments-dev
+    environment:
+      POSTGRES_DB: hospital_appointments
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-appointments-dev:/var/lib/postgresql/data
+    networks:
+      - hospital-dev
+
+  # Base de données pour le service Medical Records
+  postgres-medical-records:
+    image: postgres:15-alpine
+    container_name: postgres-medical-records-dev
+    environment:
+      POSTGRES_DB: hospital_medical_records
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-medical-records-dev:/var/lib/postgresql/data
+    networks:
+      - hospital-dev
+
+  # Base de données pour le service Auth
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: postgres-auth-dev
+    environment:
+      POSTGRES_DB: hospital_auth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres-auth-dev:/var/lib/postgresql/data
+    networks:
+      - hospital-dev
+
+  # Base de données pour le service Consultations
+  postgres-consultations:
+    image: postgres:15-alpine
+    container_name: postgres-consultations-dev
+    environment:
+      POSTGRES_DB: hospital_consultations
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres-consultations-dev:/var/lib/postgresql/data
+    networks:
+      - hospital-dev
+
+networks:
+  hospital-dev:
+    driver: bridge
+
+volumes:
+  postgres-patients-dev:
+  postgres-staff-dev:
+  postgres-appointments-dev:
+  postgres-medical-records-dev:
+  postgres-auth-dev:
+  postgres-consultations-dev:
