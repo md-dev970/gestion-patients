@@ -1,3 +1,2 @@
-com\hospital\gateway\config\GatewayConfig.class
-com\hospital\gateway\GatewayServiceApplication.class
-com\hospital\gateway\filter\AuthenticationFilter.class
+com\hospital\gateway\service\JwtVerificationService.class
+com\hospital\gateway\service\JwtClaims.class

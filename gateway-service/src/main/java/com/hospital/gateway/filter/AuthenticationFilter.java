@@ -1,91 +1,101 @@
 package com.hospital.gateway.filter;
 
+import com.hospital.gateway.service.JwtClaims;
+import com.hospital.gateway.service.JwtVerificationService;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
+
 /**
- * ╔══════════════════════════════════════════════════════════════════════════════╗
- * ║                    AUTHENTICATION FILTER (PLACEHOLDER)                       ║
- * ╠══════════════════════════════════════════════════════════════════════════════╣
- * ║  WHY THIS CLASS EXISTS:                                                      ║
- * ║  This filter intercepts ALL requests passing through the gateway.            ║
- * ║  It validates JWT tokens and checks authentication.                          ║
- * ║                                                                              ║
- * ║  // Security will be reinforced in Subject 3                                 ║
- * ║  // Currently: placeholder implementation                                    ║
- * ║                                                                              ║
- * ║  Students: You MUST implement proper JWT validation in Subject 3.            ║
- * ╚══════════════════════════════════════════════════════════════════════════════╝
+ * Global filter that validates JWT on every request (except public paths).
+ * Returns 401 for missing, invalid or expired tokens; forwards claims via
+ * X-User-Id, X-Username, X-User-Roles when valid.
  */
 @Component
 public class AuthenticationFilter implements GlobalFilter, Ordered {
 
-    // TODO: Inject JwtUtil or AuthService client in Subject 3
-    
+    private static final String BEARER_PREFIX = "Bearer ";
+
+    private final JwtVerificationService jwtVerificationService;
+
+    public AuthenticationFilter(JwtVerificationService jwtVerificationService) {
+        this.jwtVerificationService = jwtVerificationService;
+    }
+
     /**
-     * List of paths that do NOT require authentication.
-     * WHY: Login and register endpoints must be accessible without a token.
+     * Paths that do NOT require authentication.
      */
     private static final String[] PUBLIC_PATHS = {
-        "/api/auth/login",
-        "/api/auth/register",
-        "/api/auth/refresh",
-        "/actuator/health"
+            "/api/auth/login",
+            "/api/auth/register",
+            "/api/auth/refresh",
+            "/actuator/health"
     };
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getPath().value();
-        
-        // Check if the path is public (no auth required)
+
         if (isPublicPath(path)) {
-            // Business logic will be added in the specialized subject
             return chain.filter(exchange);
         }
 
-        // ═══════════════════════════════════════════════════════════════════════
-        // PLACEHOLDER: Token validation logic goes here
-        // Security will be reinforced in Subject 3
-        // ═══════════════════════════════════════════════════════════════════════
-        
-        String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
-        
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            // TODO: Properly handle unauthorized access in Subject 3
-            // For now, we log and continue (INSECURE - for development only)
-            System.out.println("[AUTH FILTER] No token provided for path: " + path);
-            
-            // Uncomment this in Subject 3 to enforce authentication:
-            // exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            // return exchange.getResponse().setComplete();
+        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
+            return respondUnauthorized(exchange, "Missing or invalid Authorization header");
         }
 
-        // Permissions will be checked in Subject 2
-        // TODO: Add role-based access control here
-        
-        return chain.filter(exchange);
+        String token = authHeader.substring(BEARER_PREFIX.length()).trim();
+        Optional<JwtClaims> claimsOpt = jwtVerificationService.verifyAndGetClaims(token);
+
+        if (claimsOpt.isEmpty()) {
+            return respondUnauthorized(exchange, "Invalid or expired token");
+        }
+
+        JwtClaims claims = claimsOpt.get();
+        ServerWebExchange mutated = exchange.mutate()
+                .request(builder -> {
+                    if (claims.userId() != null) {
+                        builder.header("X-User-Id", String.valueOf(claims.userId()));
+                    }
+                    builder.header("X-Username", claims.username());
+                    builder.header("X-User-Roles", String.join(",", claims.roles()));
+                })
+                .build();
+
+        return chain.filter(mutated);
     }
 
-    /**
-     * Determines the filter execution order.
-     * WHY: Lower numbers = higher priority. Auth should run EARLY.
-     */
+    private Mono<Void> respondUnauthorized(ServerWebExchange exchange, String errorMessage) {
+        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        exchange.getResponse().getHeaders().add(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
+        String body = "{\"error\":\"" + escapeJson(errorMessage) + "\"}";
+        DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(body.getBytes(StandardCharsets.UTF_8));
+        return exchange.getResponse().writeWith(Mono.just(buffer));
+    }
+
+    private static String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
     @Override
     public int getOrder() {
-        return -100; // High priority - run before other filters
+        return -100;
     }
 
-    /**
-     * Checks if a path is public (does not require authentication).
-     * 
-     * @param path The request path
-     * @return true if the path is public
-     */
     private boolean isPublicPath(String path) {
         for (String publicPath : PUBLIC_PATHS) {
             if (path.startsWith(publicPath)) {
@@ -95,4 +105,3 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         return false;
     }
 }
-

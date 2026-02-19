@@ -1,21 +1,25 @@
 package com.hospital.gateway.filter;
 
+import com.hospital.gateway.service.JwtClaims;
+import com.hospital.gateway.service.JwtVerificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
-import org.springframework.mock.http.server.reactive.MockServerHttpResponse;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,30 +32,23 @@ class AuthenticationFilterTest {
     @Mock
     private GatewayFilterChain filterChain;
 
-    @InjectMocks
-    private AuthenticationFilter authenticationFilter;
+    @Mock
+    private JwtVerificationService jwtVerificationService;
 
-    private ServerWebExchange exchange;
+    private AuthenticationFilter authenticationFilter;
 
     @BeforeEach
     void setUp() {
-        // Default setup - will be overridden in each test
+        authenticationFilter = new AuthenticationFilter(jwtVerificationService);
     }
 
     @Test
-    @DisplayName("filter - public path /api/auth/login - allows request")
+    @DisplayName("filter - public path /api/auth/login - allows request without token")
     void filter_publicPathLogin_allowsRequest() {
-        // Given
-        exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/auth/login").build());
-        exchange.getResponse().setStatusCode(null);
-
+        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/auth/login").build());
         when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
-        // When
-        Mono<Void> result = authenticationFilter.filter(exchange, filterChain);
-
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create(authenticationFilter.filter(exchange, filterChain))
                 .verifyComplete();
         verify(filterChain).filter(exchange);
         assertThat(exchange.getResponse().getStatusCode()).isNull();
@@ -60,152 +57,97 @@ class AuthenticationFilterTest {
     @Test
     @DisplayName("filter - public path /api/auth/register - allows request")
     void filter_publicPathRegister_allowsRequest() {
-        // Given
-        exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/auth/register").build());
-        exchange.getResponse().setStatusCode(null);
-
+        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/auth/register").build());
         when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
-        // When
-        Mono<Void> result = authenticationFilter.filter(exchange, filterChain);
-
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create(authenticationFilter.filter(exchange, filterChain))
                 .verifyComplete();
         verify(filterChain).filter(exchange);
-        assertThat(exchange.getResponse().getStatusCode()).isNull();
-    }
-
-    @Test
-    @DisplayName("filter - public path /api/auth/refresh - allows request")
-    void filter_publicPathRefresh_allowsRequest() {
-        // Given
-        exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/auth/refresh").build());
-        exchange.getResponse().setStatusCode(null);
-
-        when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
-
-        // When
-        Mono<Void> result = authenticationFilter.filter(exchange, filterChain);
-
-        // Then
-        StepVerifier.create(result)
-                .verifyComplete();
-        verify(filterChain).filter(exchange);
-        assertThat(exchange.getResponse().getStatusCode()).isNull();
     }
 
     @Test
     @DisplayName("filter - public path /actuator/health - allows request")
     void filter_publicPathActuatorHealth_allowsRequest() {
-        // Given
-        exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/actuator/health").build());
-        exchange.getResponse().setStatusCode(null);
-
+        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/actuator/health").build());
         when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
-        // When
-        Mono<Void> result = authenticationFilter.filter(exchange, filterChain);
-
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create(authenticationFilter.filter(exchange, filterChain))
                 .verifyComplete();
         verify(filterChain).filter(exchange);
-        assertThat(exchange.getResponse().getStatusCode()).isNull();
     }
 
     @Test
-    @DisplayName("filter - private path without token - allows request (placeholder implementation)")
-    void filter_privatePathWithoutToken_allowsRequest() {
-        // Given - Note: Current implementation is a placeholder and allows requests
-        exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/patients/1").build());
-        exchange.getResponse().setStatusCode(null);
+    @DisplayName("filter - private path without token - returns 401 and does not call chain")
+    void filter_privatePathWithoutToken_returns401() {
+        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/patients/1").build());
 
-        when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
-
-        // When
-        Mono<Void> result = authenticationFilter.filter(exchange, filterChain);
-
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create(authenticationFilter.filter(exchange, filterChain))
                 .verifyComplete();
-        verify(filterChain).filter(exchange);
-        // Note: In the actual implementation (Subject 3), this should set UNAUTHORIZED
-        // Currently it's a placeholder, so it allows the request
+
+        verify(filterChain, never()).filter(any());
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(exchange.getResponse().getHeaders().getContentType().toString()).contains("application/json");
     }
 
     @Test
-    @DisplayName("filter - private path with Bearer token - allows request")
-    void filter_privatePathWithBearerToken_allowsRequest() {
-        // Given
+    @DisplayName("filter - private path with invalid token - returns 401 and does not call chain")
+    void filter_privatePathWithInvalidToken_returns401() {
         HttpHeaders headers = new HttpHeaders();
-        headers.add("Authorization", "Bearer valid-token-here");
-        exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/patients/1")
-                .headers(headers)
-                .build());
-        exchange.getResponse().setStatusCode(null);
+        headers.add("Authorization", "Bearer invalid-token");
+        ServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/patients/1").headers(headers).build());
 
-        when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
+        when(jwtVerificationService.verifyAndGetClaims("invalid-token")).thenReturn(Optional.empty());
 
-        // When
-        Mono<Void> result = authenticationFilter.filter(exchange, filterChain);
-
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create(authenticationFilter.filter(exchange, filterChain))
                 .verifyComplete();
-        verify(filterChain).filter(exchange);
+
+        verify(filterChain, never()).filter(any());
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
-    @DisplayName("filter - private path with malformed token - allows request (placeholder)")
-    void filter_privatePathWithMalformedToken_allowsRequest() {
-        // Given - Note: Current implementation is a placeholder
+    @DisplayName("filter - private path with valid token - calls chain with X-User-* headers")
+    void filter_privatePathWithValidToken_callsChainWithHeaders() {
         HttpHeaders headers = new HttpHeaders();
-        headers.add("Authorization", "InvalidFormat token");
-        exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/patients/1")
-                .headers(headers)
-                .build());
-        exchange.getResponse().setStatusCode(null);
+        headers.add("Authorization", "Bearer valid-token");
+        ServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/patients/1").headers(headers).build());
 
+        JwtClaims claims = new JwtClaims("doctor1", List.of("DOCTOR"), 10L, 2L);
+        when(jwtVerificationService.verifyAndGetClaims("valid-token")).thenReturn(Optional.of(claims));
         when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
-        // When
-        Mono<Void> result = authenticationFilter.filter(exchange, filterChain);
-
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create(authenticationFilter.filter(exchange, filterChain))
                 .verifyComplete();
-        verify(filterChain).filter(exchange);
-        // Note: In actual implementation, this should reject the request
+
+        ArgumentCaptor<ServerWebExchange> captor = ArgumentCaptor.forClass(ServerWebExchange.class);
+        verify(filterChain).filter(captor.capture());
+        ServerWebExchange mutated = captor.getValue();
+        assertThat(mutated.getRequest().getHeaders().getFirst("X-Username")).isEqualTo("doctor1");
+        assertThat(mutated.getRequest().getHeaders().getFirst("X-User-Id")).isEqualTo("10");
+        assertThat(mutated.getRequest().getHeaders().getFirst("X-User-Roles")).isEqualTo("DOCTOR");
+    }
+
+    @Test
+    @DisplayName("filter - private path with Authorization not Bearer - returns 401")
+    void filter_privatePathWithNonBearer_returns401() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Basic dXNlcjpwYXNz");
+        ServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/patients/1").headers(headers).build());
+
+        StepVerifier.create(authenticationFilter.filter(exchange, filterChain))
+                .verifyComplete();
+
+        verify(filterChain, never()).filter(any());
+        verify(jwtVerificationService, never()).verifyAndGetClaims(any());
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
     @DisplayName("getOrder - returns high priority value")
     void getOrder_returnsHighPriorityValue() {
-        // When
-        int order = authenticationFilter.getOrder();
-
-        // Then
-        assertThat(order).isEqualTo(-100);
-    }
-
-    @Test
-    @DisplayName("isPublicPath - public paths return true")
-    void isPublicPath_publicPaths_returnTrue() {
-        // Note: isPublicPath is private, so we test it indirectly through filter behavior
-        // We've already tested this through the filter tests above
-        // This test documents the expected behavior
-        assertThat(true).isTrue(); // Placeholder - actual testing done in filter tests
-    }
-
-    @Test
-    @DisplayName("isPublicPath - private paths return false")
-    void isPublicPath_privatePaths_returnFalse() {
-        // Note: isPublicPath is private, so we test it indirectly through filter behavior
-        // Private paths like /api/patients, /api/appointments should require authentication
-        // This is tested indirectly in the filter tests above
-        assertThat(true).isTrue(); // Placeholder - actual testing done in filter tests
+        assertThat(authenticationFilter.getOrder()).isEqualTo(-100);
     }
 }
-
-

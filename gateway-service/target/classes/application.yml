@@ -82,6 +82,10 @@ spring:
               - OPTIONS
             allowedHeaders: "*"
 
+# JWT: same secret as auth-service so gateway can verify tokens (HS256)
+jwt:
+  secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWtleS1mb3Itand0LXRva2VuLWdlbmVyYXRpb24tMjU2Yml0cw==}
+
 eureka:
   client:
     service-url:
@@ -99,6 +103,9 @@ spring:
   config:
     activate:
       on-profile: docker
+
+# In Docker, use same JWT_SECRET as auth-service (e.g. via env in docker-compose)
+# jwt.secret falls back to default if JWT_SECRET not set
 
 eureka:
   client:

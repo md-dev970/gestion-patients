@@ -1,2 +1,1 @@
-com\hospital\gateway\GatewayRoutesConfigTest.class
-com\hospital\gateway\filter\AuthenticationFilterTest.class
+com\hospital\gateway\service\JwtVerificationServiceTest.class
