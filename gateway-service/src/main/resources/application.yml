@@ -4,6 +4,15 @@
 
 server:
   port: 8080
+  # HTTPS/TLS support for the gateway.
+  # By default, SSL is disabled. To enable HTTPS, set SERVER_SSL_ENABLED=true
+  # and provide key store configuration via environment variables.
+  ssl:
+    enabled: ${SERVER_SSL_ENABLED:false}
+    key-store: ${SERVER_SSL_KEY_STORE:}
+    key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD:}
+    key-store-type: ${SERVER_SSL_KEY_STORE_TYPE:PKCS12}
+    key-alias: ${SERVER_SSL_KEY_ALIAS:gateway}
 
 spring:
   application:

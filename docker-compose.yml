@@ -167,8 +167,6 @@ services:
       context: ./auth-service
       dockerfile: Dockerfile
     container_name: auth-service
-    ports:
-      - "8085:8085"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-auth:5432/hospital_auth
@@ -186,8 +184,6 @@ services:
       context: ./patient-service
       dockerfile: Dockerfile
     container_name: patient-service
-    ports:
-      - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-patients:5432/hospital_patients
@@ -205,8 +201,6 @@ services:
       context: ./staff-service
       dockerfile: Dockerfile
     container_name: staff-service
-    ports:
-      - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-staff:5432/hospital_staff
@@ -224,8 +218,6 @@ services:
       context: ./appointment-service
       dockerfile: Dockerfile
     container_name: appointment-service
-    ports:
-      - "8083:8083"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-appointments:5432/hospital_appointments
@@ -243,8 +235,6 @@ services:
       context: ./medical-record-service
       dockerfile: Dockerfile
     container_name: medical-record-service
-    ports:
-      - "8084:8084"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-medical-records:5432/hospital_medical_records
@@ -262,8 +252,6 @@ services:
       context: ./consultations-service
       dockerfile: Dockerfile
     container_name: consultations-service
-    ports:
-      - "8086:8086"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-consultations:5432/hospital_consultations
