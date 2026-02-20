@@ -19,7 +19,7 @@ spring:
 
   cloud:
     gateway:
-      # US1.7: security headers on all responses (HSTS, X-Content-Type-Options, X-Frame-Options, etc.)
+      # US1.7 / T1.8: security headers on all responses (headers présents)
       default-filters:
         - name: SecureHeaders
       # When SSL is disabled, HSTS is not sent (override in prod when HTTPS is on)

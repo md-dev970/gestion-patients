@@ -312,17 +312,17 @@ Each 400 from the input validation filter triggers a **SUSPICIOUS_INPUT** event.
 
 ---
 
-## 8. Security response headers (US1.7)
+## 8. Security response headers (US1.7 / T1.8)
 
-The gateway adds **security headers** to all responses (gateway-generated and proxied) using Spring Cloud Gateway’s built-in **SecureHeaders** filter applied via `default-filters`. Every client-facing response includes the required headers.
+The gateway adds **security headers** (T1.8 – *headers présents*) to all responses (gateway-generated and proxied) using Spring Cloud Gateway’s built-in **SecureHeaders** filter applied via `default-filters`. Every client-facing response includes the required headers.
 
 ### 8.1 Headers added
 
 | Header | Value | Description |
 |--------|--------|-------------|
-| **X-Content-Type-Options** | `nosniff` | Prevents MIME-type sniffing (required by US1.7). |
-| **X-Frame-Options** | `DENY` | Prevents clickjacking (required by US1.7). |
-| **Strict-Transport-Security** (HSTS) | `max-age=...` | Enforces HTTPS on subsequent visits (required by US1.7). Sent only when not disabled (see below). |
+| **X-Content-Type-Options** | `nosniff` | Prevents MIME-type sniffing (T1.8 / US1.7). |
+| **X-Frame-Options** | `DENY` | Prevents clickjacking (T1.8 / US1.7). |
+| **Strict-Transport-Security** (HSTS) | `max-age=...` | Enforces HTTPS on subsequent visits (T1.8 / US1.7). Sent only when not disabled (see below). |
 | X-XSS-Protection | `1; mode=block` | Legacy XSS filter hint. |
 | Referrer-Policy | `no-referrer` | Controls referrer information. |
 | Content-Security-Policy | (default) | Restricts resource loading. |
