@@ -4,9 +4,8 @@
 
 server:
   port: 8080
-  # HTTPS/TLS support for the gateway.
-  # By default, SSL is disabled. To enable HTTPS, set SERVER_SSL_ENABLED=true
-  # and provide key store configuration via environment variables.
+  # HTTPS/TLS support (T1.2). By default SSL is disabled. To enable HTTPS set
+  # SERVER_SSL_ENABLED=true and provide a key store (or use dev keystore from scripts/generate-dev-keystore).
   ssl:
     enabled: ${SERVER_SSL_ENABLED:false}
     key-store: ${SERVER_SSL_KEY_STORE:}

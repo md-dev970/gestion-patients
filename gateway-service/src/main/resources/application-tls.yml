@@ -1,0 +1,8 @@
+# Profile for when HTTPS is enabled (T1.2). Activate with: spring.profiles.include=tls (or -Dspring.profiles.active=docker,tls).
+# Re-enables HSTS so Strict-Transport-Security is sent on responses.
+spring:
+  cloud:
+    gateway:
+      filter:
+        secure-headers:
+          disable: ""   # do not disable HSTS when TLS is on

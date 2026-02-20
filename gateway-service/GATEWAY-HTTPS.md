@@ -83,7 +83,23 @@ In Docker/Kubernetes, these values should be injected via environment variables 
 the key store mounted as a volume or provided via a secret.
 
 > Note: The project does **not** ship a key store file. It is the operator’s
-> responsibility to generate and mount the certificate/key.
+> responsibility to generate and mount the certificate/key (or use the dev script below).
+
+### T1.2 – Activer HTTPS
+
+- **Production**: Provide your own keystore (PKCS12/JKS) and set the environment variables (`SERVER_SSL_ENABLED=true`, `SERVER_SSL_KEY_STORE`, `SERVER_SSL_KEY_STORE_PASSWORD`, `SERVER_SSL_KEY_STORE_TYPE`, `SERVER_SSL_KEY_ALIAS`). Mount the keystore in Docker or point to its path.
+- **Dev / démo**: Run the script to generate a self-signed keystore:
+  - From `gateway-service`: `./scripts/generate-dev-keystore.sh` (or `scripts\generate-dev-keystore.bat` on Windows). This creates `build/gateway-dev.p12`.
+  - Set `SERVER_SSL_ENABLED=true`, `SERVER_SSL_KEY_STORE=<path-to>/gateway-dev.p12`, `SERVER_SSL_KEY_STORE_PASSWORD=changeit`, `SERVER_SSL_KEY_STORE_TYPE=PKCS12`, `SERVER_SSL_KEY_ALIAS=gateway`.
+  - Start the gateway; it will listen on HTTPS on port 8080.
+- **Vérification**: `curl -k https://localhost:8080/actuator/health` → **200**. `curl -k https://localhost:8080/api/patients/1` → **401**. Use `-k` to accept the self-signed certificate in dev.
+- **HSTS avec HTTPS**: When TLS is on, activate the `tls` profile so HSTS is sent (e.g. `SPRING_PROFILES_ACTIVE=docker,tls` or `spring.profiles.include=tls`). The profile is defined in `application-tls.yml` and re-enables the `Strict-Transport-Security` header.
+
+**Redirection HTTP vers HTTPS (T1.2)**  
+When HTTPS is enabled, the gateway listens **only on HTTPS** (port 8080). There is no HTTP listener on the gateway; clients must use `https://`. For HTTP→HTTPS redirect (e.g. users typing `http://`), use a reverse proxy or load balancer in front of the gateway: listen on port 80 and respond with **301** or **302** to `https://<host>:8080/...` (or to 443 if the proxy terminates TLS). Spring Cloud Gateway (Netty) does not support two listeners (HTTP + HTTPS) in the same process out of the box.
+
+**Docker avec TLS (T1.2)**  
+When TLS is enabled in Docker, set the SSL environment variables and mount the keystore (e.g. a volume pointing to the host path of your PKCS12 file). The gateway healthcheck must use **HTTPS** (and, for self-signed certs, ignore certificate verification). An optional override file **`docker-compose.tls.yml`** at the project root is provided: it overrides the gateway with TLS env, mounts `gateway-service/build` as the keystore directory (after running `./scripts/generate-dev-keystore.sh`), and sets the healthcheck to `wget ... https://localhost:8080/actuator/health` with `--no-check-certificate`. Run with: `docker-compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build`. Verify with `curl -k https://localhost:8080/actuator/health`.
 
 ---
 
