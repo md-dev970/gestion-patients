@@ -217,7 +217,55 @@ Each 429 triggers a **RATE_LIMIT_EXCEEDED** event. The payload is suitable for I
 
 ---
 
-## 7. Routing configuration
+## 7. Strict input validation (US1.6)
+
+The gateway applies **strict validation** of request inputs (query parameters and headers) to block injection attempts (SQLi, XSS). Suspicious requests receive **400 Bad Request** and trigger a **SUSPICIOUS_INPUT** event for IDS.
+
+### 7.1 Validation schemas
+
+- **Structural validation**: Request body and field formats are validated in each microservice via **Bean Validation** (`@Valid`, `@NotBlank`, etc.) on DTOs. Controllers return **400** for `MethodArgumentNotValidException`.
+- **Injection detection**: In the gateway, **query parameter values** and **header values** (except `Authorization`, to avoid false positives on JWT) are scanned for SQLi/XSS-like patterns (blocklist). This is a separate layer from Bean Validation; no change to existing DTO rules.
+
+### 7.2 Scope and behaviour
+
+- **Scanned**: All query parameter values and all header values except `Authorization`.
+- **Body**: Not inspected in the gateway in the current implementation (no body buffering).
+- **When a pattern matches**: The gateway responds with **400 Bad Request**, **`Content-Type: application/json`**, and body: `{"error":"Invalid or suspicious input"}`. The request is **not** proxied. A **SUSPICIOUS_INPUT** audit event is sent (see below). The response does **not** reveal which pattern matched.
+- **Excluded paths**: Same as rate limit, e.g. `/actuator/health`; configurable via `input-validation.excluded-paths`.
+
+**Filter order**: **InputValidationFilter** runs with order **-80**, i.e. after **RateLimitFilter** (-90) and before **RbacAuthorizationFilter** (-50).
+
+### 7.3 Configuration
+
+In `application.yml`:
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `input-validation.enabled` | Enable/disable the input validation filter | `true` |
+| `input-validation.excluded-paths` | Path prefixes that skip injection checks | `/actuator/health` |
+
+Example env var: `INPUT_VALIDATION_ENABLED`.
+
+### 7.4 SUSPICIOUS_INPUT event (IDS)
+
+Each 400 from the input validation filter triggers a **SUSPICIOUS_INPUT** event. The payload contains **no PII** and no raw input value (suitable for IDS).
+
+| Field | Description |
+|-------|-------------|
+| `eventType` | `"SUSPICIOUS_INPUT"` |
+| `timestamp` | ISO-8601 instant |
+| `source` | `"query"` or `"header"` (where the pattern was detected) |
+| `path` | Request path (e.g. `/api/patients/search`) |
+| `method` | HTTP method (e.g. `GET`) |
+| `category` | `"SQLI"` or `"XSS"` (detection category) |
+
+**Sending the event**
+
+- The same **no-op** / **HTTP** behaviour as for ACCESS_DENIED and RATE_LIMIT_EXCEEDED applies: when **`security.audit.url`** is set, the gateway POSTs SUSPICIOUS_INPUT to that URL (fire-and-forget).
+
+---
+
+## 8. Routing configuration
 
 The main routes are defined in `application.yml`:
 
@@ -233,7 +281,7 @@ through the gateway without changing the downstream endpoints.
 
 ---
 
-## 8. Tests
+## 9. Tests
 
 Main test classes:
 
@@ -252,12 +300,16 @@ Main test classes:
    - Rate limit store: under limit → allowed; over limit in window → denied; different keys independent; after window expires → allowed again.
    - Rate limit filter: excluded path → chain called, no quota consumed; under limit → chain called; over IP limit → 429, JSON body, `SecurityAuditSender.sendRateLimitExceeded` invoked with keyType IP; over user limit (with `X-User-Id`) → 429, audit with keyType USER.
 
-4. **JwtVerificationServiceTest**
+4. **InjectionPatternsTest** / **InputValidationFilterTest**
+   - Injection patterns: known SQLi (e.g. `OR 1=1`, `UNION SELECT`) → match SQLI; known XSS (e.g. `<script>`, `javascript:`) → match XSS; safe input → no match.
+   - Input validation filter: excluded path → chain called; suspicious query param → 400, JSON body, `SecurityAuditSender.sendSuspiciousInput` invoked with source=query, category=SQLI or XSS; suspicious header → 400, audit with source=header; safe input → chain called; disabled → chain called even with suspicious input.
+
+5. **JwtVerificationServiceTest**
    - Valid token (same secret as auth-service) → claims returned (username, roles, userId, staffId).
    - Expired, malformed, or wrong-secret token → `Optional.empty()`.
    - Null or blank token → `Optional.empty()`.
 
-5. **GatewayRoutesConfigTest**
+6. **GatewayRoutesConfigTest**
    - Spring Boot test that starts the gateway context and autowires the `RouteLocator`.
    - Verifies that the gateway defines routes for **all** core KIT COMMUN services:
      `auth-service`, `patient-service`, `staff-service`,
@@ -276,7 +328,7 @@ For full end-to-end verification in Docker:
    curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/patients/1
    # Expect 401
    ```
-3. **With a valid token** (obtain via `POST http://localhost:8080/api/auth/login`), the same path should be forwarded and return 200 or 404 from the backend; if the user’s role is not allowed for that action on a patient-dossier path, the gateway returns **403** (no call to the backend) and emits an ACCESS_DENIED audit event. If the client or user exceeds the rate limit, the gateway returns **429** and emits a RATE_LIMIT_EXCEEDED event.
+3. **With a valid token** (obtain via `POST http://localhost:8080/api/auth/login`), the same path should be forwarded and return 200 or 404 from the backend; if the user’s role is not allowed for that action on a patient-dossier path, the gateway returns **403** (no call to the backend) and emits an ACCESS_DENIED audit event. If the client or user exceeds the rate limit, the gateway returns **429** and emits a RATE_LIMIT_EXCEEDED event. If a query or header contains SQLi/XSS-like patterns (e.g. `?query=OR 1=1`), the gateway returns **400** and emits a SUSPICIOUS_INPUT event.
    ```bash
    curl -H "Authorization: Bearer <accessToken>" http://localhost:8080/api/patients/1
    ```

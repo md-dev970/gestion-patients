@@ -32,4 +32,12 @@ public class NoOpSecurityAuditSender implements SecurityAuditSender {
                     keyType, key, limit, windowSeconds);
         }
     }
+
+    @Override
+    public void sendSuspiciousInput(String eventType, String source, String path, String method, String category) {
+        if (log.isDebugEnabled()) {
+            log.debug("SUSPICIOUS_INPUT (no-op audit): eventType={}, source={}, path={}, method={}, category={}",
+                    eventType, source, path, method, category);
+        }
+    }
 }

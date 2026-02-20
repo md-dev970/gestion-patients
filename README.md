@@ -56,7 +56,7 @@ Ce projet est une implémentation complète du **Kit Commun** pour le système d
 | **consultations-service** | 8086 | Gestion des consultations médicales |
 | **staff-service** | 8082 | Gestion du personnel (médecins, infirmiers) |
 | **appointment-service** | 8083 | Gestion des rendez-vous |
-| **gateway-service** | 8080 | Point d'entrée unique, routage |
+| **gateway-service** | 8080 | Point d'entrée unique, routage, validation stricte des entrées (query/headers) et événements IDS SQLi/XSS (US1.6, voir gateway-service/GATEWAY-HTTPS.md) |
 | **discovery-service** | 8761 | Eureka Server, découverte de services |
 
 ## 🚀 Démarrage Rapide
@@ -236,6 +236,11 @@ Chaque service a son propre `application.yml` avec :
 - Port du service
 - Configuration Eureka
 - JWT secrets (pour auth-service)
+
+### Validation des entrées (US1.6)
+
+- **Gateway** : les paramètres de requête (query) et les en-têtes (sauf `Authorization`) sont analysés pour détecter des motifs d’injection (SQLi, XSS). Une requête suspecte (ex. `?query=OR 1=1`) reçoit **400 Bad Request** et un événement **SUSPICIOUS_INPUT** est envoyé vers l’IDS/audit si `security.audit.url` est configuré. Détails : `gateway-service/GATEWAY-HTTPS.md` section 7.
+- **Services** : la structure des corps de requête est validée via Bean Validation (`@Valid`) sur les DTOs ; les erreurs de validation renvoient **400**.
 
 ### Bases de données
 

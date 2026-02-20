@@ -94,7 +94,13 @@ rate-limit:
   excluded-paths:
     - /actuator/health
 
-# Optional: send ACCESS_DENIED / RATE_LIMIT_EXCEEDED to security-audit-log or IDS (no-op if unset)
+# Input validation (US1.6): block SQLi/XSS-like patterns in query and headers
+input-validation:
+  enabled: ${INPUT_VALIDATION_ENABLED:true}
+  excluded-paths:
+    - /actuator/health
+
+# Optional: send ACCESS_DENIED / RATE_LIMIT_EXCEEDED / SUSPICIOUS_INPUT to security-audit-log or IDS (no-op if unset)
 # security:
 #   audit:
 #     url: http://security-audit-log:8080/api/events

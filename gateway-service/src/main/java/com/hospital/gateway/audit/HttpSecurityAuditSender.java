@@ -77,4 +77,25 @@ public class HttpSecurityAuditSender implements SecurityAuditSender {
                 .onErrorResume(e -> Mono.empty())
                 .subscribe();
     }
+
+    @Override
+    public void sendSuspiciousInput(String eventType, String source, String path, String method, String category) {
+        Map<String, Object> payload = Map.of(
+                "eventType", eventType != null ? eventType : "SUSPICIOUS_INPUT",
+                "timestamp", Instant.now().toString(),
+                "source", source != null ? source : "",
+                "path", path != null ? path : "",
+                "method", method != null ? method : "",
+                "category", category != null ? category : ""
+        );
+        webClient.post()
+                .uri(auditUrl)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(payload)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .doOnError(e -> log.warn("Failed to send SUSPICIOUS_INPUT to audit log: {}", e.getMessage()))
+                .onErrorResume(e -> Mono.empty())
+                .subscribe();
+    }
 }

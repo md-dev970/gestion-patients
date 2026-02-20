@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.hospital.gateway.service.RbacServiceTest" time="0.062" tests="13" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.hospital.gateway.audit.HttpSecurityAuditSenderTest" time="2.862" tests="1" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="17"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -10,7 +10,6 @@
     <property name="user.variant" value=""/>
     <property name="java.vendor.url" value="https://java.oracle.com/"/>
     <property name="user.timezone" value="Africa/Casablanca"/>
-    <property name="org.jboss.logging.provider" value="slf4j"/>
     <property name="os.name" value="Windows 11"/>
     <property name="java.vm.specification.version" value="17"/>
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
@@ -31,8 +30,6 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="FILE_LOG_CHARSET" value="windows-1252"/>
-    <property name="java.awt.headless" value="true"/>
     <property name="surefire.real.class.path" value="C:\Users\md\AppData\Local\Temp\surefire14743291123896302046\surefirebooter-20260220174846462_3.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
@@ -50,9 +47,7 @@
     <property name="user.dir" value="D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service"/>
     <property name="os.arch" value="amd64"/>
     <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
-    <property name="PID" value="12608"/>
     <property name="sun.os.patch.level" value=""/>
-    <property name="CONSOLE_LOG_CHARSET" value="windows-1252"/>
     <property name="native.encoding" value="Cp1252"/>
     <property name="java.library.path" value="D:\Studies\S5\Qualite\Presentation_1\QA\QA\jdk-17.0.12\bin;C:\WINDOWS\Sun\Java\bin;C:\WINDOWS\system32;C:\WINDOWS;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Users\md\Downloads\WINDOWS.X64_193000_db_home\bin;C:\Program Files (x86)\Common Files\Oracle\Java\java8path;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;D:\Downloads\WINDOWS.X64_193000_db_home\bin;C:\Program Files (x86)\VMware\VMware Workstation\bin\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\Docker\Docker\resources\bin;C:\Program Files\dotnet\;C:\Program Files (x86)\Microsoft SQL Server\160\Tools\Binn\;C:\Program Files\Microsoft SQL Server\160\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files\Microsoft SQL Server\160\DTS\Binn\;C:\Program Files\Git\cmd;C:\Program Files\nodejs\;C:\Program Files\Vagrant\bin;C:\Program Files\cursor\resources\app\bin;C:\Users\md\AppData\Local\Programs\Python\Launcher\;C:\Users\md\AppData\Local\Microsoft\WindowsApps;C:\msys64\ucrt64\bin;C:\Users\md\AppData\Local\Programs\Microsoft VS Code\bin;D:\Downloads\payara-6.2025.5\payara6\bin;C:\Users\md\AppData\Local\Programs\mongosh\;C:\Program Files\MySQL\MySQL Server 8.0\bin;C:\Users\md\AppData\Roaming\npm;C:\Program Files\nodejs\;C:\Users\md\AppData\Local\Programs\Python\Python313\Scripts;D:\Apps\Android\Sdk\emulator;D:\Apps\Android\Sdk\build-tools;D:\Apps\Android\Sdk\platform-tools;D:\Studies\S5\Qualite\Presentation_1\QA\QA\jdk-17.0.12\bin;D:\Studies\S5\Securite\packer_1.14.2_windows_amd64;C:\Program Files\MongoDB\Tools\100\bin;D:\Downloads\apache-maven-3.9.12-bin\apache-maven-3.9.12\bin;C:\Users\md\AppData\Local\Programs\cursor\resources\app\bin;."/>
     <property name="java.vm.info" value="mixed mode, sharing"/>
@@ -60,19 +55,6 @@
     <property name="java.vm.version" value="17.0.12+8-LTS-286"/>
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="61.0"/>
-    <property name="LOGGED_APPLICATION_NAME" value="[gateway-service] "/>
   </properties>
-  <testcase name="isAllowed_patientsRead_doctor_allowed" classname="com.hospital.gateway.service.RbacServiceTest" time="0.008"/>
-  <testcase name="isAllowed_medicalRecordsDelete_nurse_denied" classname="com.hospital.gateway.service.RbacServiceTest" time="0.001"/>
-  <testcase name="isAllowed_pathOutsideScope_returnsTrue" classname="com.hospital.gateway.service.RbacServiceTest" time="0.002"/>
-  <testcase name="isAllowed_patientPath_emptyRoles_denied" classname="com.hospital.gateway.service.RbacServiceTest" time="0.001"/>
-  <testcase name="resolveResource_patientsPrefix_returnsPATIENTS" classname="com.hospital.gateway.service.RbacServiceTest" time="0.002"/>
-  <testcase name="isAllowed_patientsDelete_admin_allowed" classname="com.hospital.gateway.service.RbacServiceTest" time="0.003"/>
-  <testcase name="isAllowed_patientsDelete_nurse_denied" classname="com.hospital.gateway.service.RbacServiceTest" time="0.003"/>
-  <testcase name="isAllowed_consultationsRead_receptionist_denied" classname="com.hospital.gateway.service.RbacServiceTest" time="0.004"/>
-  <testcase name="resolveResource_otherPath_returnsEmpty" classname="com.hospital.gateway.service.RbacServiceTest" time="0.003"/>
-  <testcase name="isAllowed_patientsRead_patient_denied" classname="com.hospital.gateway.service.RbacServiceTest" time="0.003"/>
-  <testcase name="extractResourceId_extractsId" classname="com.hospital.gateway.service.RbacServiceTest" time="0.002"/>
-  <testcase name="isAllowed_medicalRecordsRead_labTech_allowed" classname="com.hospital.gateway.service.RbacServiceTest" time="0.004"/>
-  <testcase name="resolveAction_mapsCorrectly" classname="com.hospital.gateway.service.RbacServiceTest" time="0.001"/>
+  <testcase name="sendSuspiciousInput_postsCorrectPayload" classname="com.hospital.gateway.audit.HttpSecurityAuditSenderTest" time="2.74"/>
 </testsuite>

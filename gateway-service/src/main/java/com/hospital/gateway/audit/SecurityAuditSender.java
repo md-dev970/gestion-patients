@@ -21,4 +21,17 @@ public interface SecurityAuditSender {
      * Implementations should be non-blocking (fire-and-forget).
      */
     void sendRateLimitExceeded(String keyType, String key, long limit, long windowSeconds);
+
+    /**
+     * Sends a SUSPICIOUS_INPUT event (for IDS) when SQLi/XSS-like patterns are detected.
+     * No PII or raw payload in the event.
+     * Implementations should be non-blocking (fire-and-forget).
+     *
+     * @param eventType e.g. "SUSPICIOUS_INPUT"
+     * @param source    "query", "header", or "body"
+     * @param path      request path
+     * @param method    HTTP method
+     * @param category  "SQLI" or "XSS"
+     */
+    void sendSuspiciousInput(String eventType, String source, String path, String method, String category);
 }
