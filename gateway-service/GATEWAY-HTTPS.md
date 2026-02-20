@@ -189,9 +189,9 @@ Every 403 from the RBAC filter triggers an **ACCESS_DENIED** event. The payload 
 
 ---
 
-## 6. Rate limiting (US1.4)
+## 6. Rate limiting (US1.4 / T1.5)
 
-The gateway applies **configurable rate limits** by **client IP** and by **authenticated user** to reduce abuse. When a limit is exceeded, the gateway returns **429 Too Many Requests** and emits a **RATE_LIMIT_EXCEEDED** event (for IDS/audit).
+The gateway applies **rate limiting middleware** (T1.5) with an **in-memory store**; **429** is returned when the limit is exceeded. Configurable rate limits apply by **client IP** and by **authenticated user** to reduce abuse. When a limit is exceeded, the gateway returns **429 Too Many Requests** and emits a **RATE_LIMIT_EXCEEDED** event (for IDS/audit).
 
 ### 6.1 Limits applied
 
@@ -242,16 +242,36 @@ Each 429 triggers a **RATE_LIMIT_EXCEEDED** event. The payload is suitable for I
 - Rate limiting uses an **in-memory** store (per gateway instance). With multiple gateway instances, limits are **per instance**, not global.
 - **X-Forwarded-For**: When the gateway is behind a proxy, the first value in the header is used as the client IP. Document trust boundaries (e.g. only trust when the gateway is not directly exposed) to avoid spoofing.
 
+### 6.6 Anti-bruteforce by IP (T1.6)
+
+In addition to **per-account** lock in auth-service (N failed passwords → temporary account lock, see auth-service docs), the gateway applies **per-IP** anti-bruteforce on the login path:
+
+- **Counter per IP**: Each **401** or **423** response from auth-service for `POST /api/auth/login` is counted per client IP (same resolution as rate limit: `X-Forwarded-For` or remote address).
+- **TTL block**: After **N** failures (configurable, default 5), that IP is **blocked** for a duration (default 15 minutes). During the block, further POSTs to the login path receive **423 Locked** with body `{"error":"Too many login attempts. Try again later."}` without calling auth-service.
+- **Event**: When an IP is first blocked (count reaches N), a **RATE_LIMIT_EXCEEDED**-style event with key type **BRUTEFORCE_IP** is sent (same `security.audit.url` as other events).
+
+**Configuration** (`application.yml` / env):
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `bruteforce-ip.max-failed-attempts` | Failed logins (401/423) before block | 5 |
+| `bruteforce-ip.lockout-duration-minutes` | Block duration in minutes | 15 |
+| `bruteforce-ip.login-path` | Path that triggers counting | `/api/auth/login` |
+
+Env vars: `BRUTEFORCE_IP_MAX_FAILED_ATTEMPTS`, `BRUTEFORCE_IP_LOCKOUT_DURATION_MINUTES`, `BRUTEFORCE_IP_LOGIN_PATH`.
+
+**Filter order**: **BruteforceByIpFilter** runs with order **-92** (after AuthenticationFilter -100, before RateLimitFilter -90). Only requests to the configured login path (POST) are subject to block and count.
+
 ---
 
-## 7. Strict input validation (US1.6)
+## 7. Strict input validation (US1.6 / T1.7)
 
-The gateway applies **strict validation** of request inputs (query parameters and headers) to block injection attempts (SQLi, XSS). Suspicious requests receive **400 Bad Request** and trigger a **SUSPICIOUS_INPUT** event for IDS.
+The gateway applies **validation middleware** (T1.7) that enforces **validation schemas** and **rejects invalid requests** with **400 Bad Request**. See **[VALIDATION-SCHEMAS.md](VALIDATION-SCHEMAS.md)** for the full definition of schemas and middleware. Suspicious inputs (SQLi, XSS) receive **400** and trigger a **SUSPICIOUS_INPUT** event for IDS.
 
-### 7.1 Validation schemas
+### 7.1 Validation schemas (T1.7)
 
-- **Structural validation**: Request body and field formats are validated in each microservice via **Bean Validation** (`@Valid`, `@NotBlank`, etc.) on DTOs. Controllers return **400** for `MethodArgumentNotValidException`.
-- **Injection detection**: In the gateway, **query parameter values** and **header values** (except `Authorization`, to avoid false positives on JWT) are scanned for SQLi/XSS-like patterns (blocklist). This is a separate layer from Bean Validation; no change to existing DTO rules.
+- **Injection schema** (gateway): Blocklist of patterns by category (SQLI, XSS) applied to query and header values. Defined in [VALIDATION-SCHEMAS.md](VALIDATION-SCHEMAS.md); implemented in `InjectionPatterns`.
+- **Structural schema** (services): Request body and field formats are validated in each microservice via **Bean Validation** (`@Valid`, `@NotBlank`, etc.) on DTOs. Controllers return **400** for `MethodArgumentNotValidException`.
 
 ### 7.2 Scope and behaviour
 

@@ -7,9 +7,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * In-memory, thread-safe rate limit store. Uses a fixed window per key.
- * Expired windows are replaced on access to avoid unbounded growth of counter state;
- * the map itself can grow with distinct keys (IPs and user IDs).
+ * Rate limit store (T1.5): in-memory, thread-safe. Uses a fixed window per key.
+ * Expired windows are replaced on access to avoid unbounded growth; map grows with distinct keys (IPs, user IDs).
+ * Redis can be added later for distributed rate limiting.
  */
 @Component
 public class RateLimitStore {

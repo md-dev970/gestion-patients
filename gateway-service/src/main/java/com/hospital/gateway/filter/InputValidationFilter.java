@@ -18,8 +18,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * Global filter that checks query parameters and headers for SQLi/XSS-like patterns (US1.6).
- * Runs after RateLimitFilter (order -80). Returns 400 and emits SUSPICIOUS_INPUT when detected.
+ * Validation middleware (T1.7): enforces injection detection schema on query and headers.
+ * Rejects invalid requests with 400 (US1.6). Runs after RateLimitFilter (order -80).
+ * Emits SUSPICIOUS_INPUT when a pattern matches.
  */
 @Component
 public class InputValidationFilter implements GlobalFilter, Ordered {

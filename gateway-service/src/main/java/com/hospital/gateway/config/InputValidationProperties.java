@@ -6,8 +6,8 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * Configuration for strict input validation (US1.6).
- * Excluded paths skip injection pattern checks (query/headers).
+ * Configuration for validation middleware (T1.7) and strict input validation (US1.6).
+ * Excluded paths skip injection pattern checks (query/headers); invalid requests are rejected with 400.
  */
 @Component
 @ConfigurationProperties(prefix = "input-validation")

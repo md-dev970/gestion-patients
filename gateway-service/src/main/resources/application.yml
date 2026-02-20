@@ -95,7 +95,7 @@ jwt:
   public-key: ${JWT_PUBLIC_KEY:}
   public-key-location: ${JWT_PUBLIC_KEY_LOCATION:}
 
-# Rate limiting (US1.4): per IP and per user, configurable limits
+# Rate limiting (US1.4 / T1.5): middleware, in-memory store; 429 if exceeded
 rate-limit:
   requests-per-minute-per-ip: ${RATE_LIMIT_REQUESTS_PER_MINUTE_PER_IP:100}
   requests-per-minute-per-user: ${RATE_LIMIT_REQUESTS_PER_MINUTE_PER_USER:100}
@@ -103,7 +103,13 @@ rate-limit:
   excluded-paths:
     - /actuator/health
 
-# Input validation (US1.6): block SQLi/XSS-like patterns in query and headers
+# Anti-bruteforce by IP (T1.6): counter per IP, TTL block after N failed logins (401/423); 423 when blocked
+bruteforce-ip:
+  max-failed-attempts: ${BRUTEFORCE_IP_MAX_FAILED_ATTEMPTS:5}
+  lockout-duration-minutes: ${BRUTEFORCE_IP_LOCKOUT_DURATION_MINUTES:15}
+  login-path: ${BRUTEFORCE_IP_LOGIN_PATH:/api/auth/login}
+
+# Validation middleware (T1.7): schemas + rejection of invalid requests (US1.6 – injection in query/headers)
 input-validation:
   enabled: ${INPUT_VALIDATION_ENABLED:true}
   excluded-paths:

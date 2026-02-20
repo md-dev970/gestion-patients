@@ -1,10 +1,13 @@
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\config\GatewayConfig.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\validation\InjectionPatterns.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\bruteforce\BruteforceByIpStore.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\rbac\RbacPolicy.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\rbac\Resource.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\filter\AuthenticationFilter.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\rbac\Action.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\GatewayServiceApplication.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\filter\BruteforceByIpFilter.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\config\BruteforceByIpProperties.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\service\RbacService.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\audit\NoOpSecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\main\java\com\hospital\gateway\config\InputValidationProperties.java

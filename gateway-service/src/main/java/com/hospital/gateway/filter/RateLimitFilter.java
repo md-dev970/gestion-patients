@@ -18,8 +18,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * Global filter that enforces rate limits by IP and by authenticated user.
- * Runs after AuthenticationFilter (order -90). Returns 429 and emits RATE_LIMIT_EXCEEDED when exceeded.
+ * Rate limiting middleware (T1.5): in-memory store; 429 when limit exceeded.
+ * Enforces limits by IP and by authenticated user. Runs after AuthenticationFilter (order -90).
+ * Emits RATE_LIMIT_EXCEEDED when exceeded.
  */
 @Component
 public class RateLimitFilter implements GlobalFilter, Ordered {

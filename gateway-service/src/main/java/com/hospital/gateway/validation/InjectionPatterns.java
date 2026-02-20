@@ -7,9 +7,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Pattern-based detection for SQLi and XSS in request inputs (query, headers, body).
- * Patterns are compiled once and matched case-insensitively.
- * Returns category "SQLI" or "XSS" on first match; no PII in results.
+ * Injection detection schema (T1.7): pattern-based blocklist for SQLi and XSS in request inputs (query, headers).
+ * Patterns are compiled once and matched case-insensitively. Returns category "SQLI" or "XSS" on first match; no PII in results.
  */
 @Component
 public class InjectionPatterns {
