@@ -162,7 +162,62 @@ Every 403 from the RBAC filter triggers an **ACCESS_DENIED** event. The payload 
 
 ---
 
-## 6. Routing configuration
+## 6. Rate limiting (US1.4)
+
+The gateway applies **configurable rate limits** by **client IP** and by **authenticated user** to reduce abuse. When a limit is exceeded, the gateway returns **429 Too Many Requests** and emits a **RATE_LIMIT_EXCEEDED** event (for IDS/audit).
+
+### 6.1 Limits applied
+
+- **Per IP**: Every request (including unauthenticated ones, e.g. login/register) counts against the **per-IP** limit. The client IP is taken from the **`X-Forwarded-For`** header (first value) when present, otherwise from the request’s remote address.
+- **Per user**: For requests that already have **`X-User-Id`** (set by the AuthenticationFilter after a valid JWT), an additional **per-user** limit is applied. Both limits must be satisfied for the request to proceed.
+
+### 6.2 Configuration
+
+In `application.yml` (and via environment variables in Docker):
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `rate-limit.requests-per-minute-per-ip` | Max requests per window per client IP | 100 |
+| `rate-limit.requests-per-minute-per-user` | Max requests per window per authenticated user | 100 |
+| `rate-limit.window-seconds` | Window duration in seconds | 60 |
+| `rate-limit.excluded-paths` | Path prefixes that do not consume quota (e.g. health checks) | `/actuator/health` |
+
+Example env vars: `RATE_LIMIT_REQUESTS_PER_MINUTE_PER_IP`, `RATE_LIMIT_REQUESTS_PER_MINUTE_PER_USER`, `RATE_LIMIT_WINDOW_SECONDS`.
+
+### 6.3 When limit is exceeded: 429 and event
+
+- The gateway responds with **429 Too Many Requests**, **`Content-Type: application/json`**, and body: `{"error":"Too Many Requests"}`.
+- The request is **not** proxied to the backend.
+- A **RATE_LIMIT_EXCEEDED** event is sent (see below) in a non-blocking way (fire-and-forget).
+
+**Filter order**: **RateLimitFilter** runs with order **-90**, i.e. after **AuthenticationFilter** (-100) and before **RbacAuthorizationFilter** (-50).
+
+### 6.4 RATE_LIMIT_EXCEEDED event (IDS)
+
+Each 429 triggers a **RATE_LIMIT_EXCEEDED** event. The payload is suitable for IDS/audit (key type and key identify the limit that was exceeded).
+
+| Field | Description |
+|-------|-------------|
+| `eventType` | `"RATE_LIMIT_EXCEEDED"` |
+| `timestamp` | ISO-8601 instant |
+| `keyType` | `"IP"` or `"USER"` |
+| `key` | Client IP or user ID (technical identifier) |
+| `limit` | Configured limit (requests per window) |
+| `windowSeconds` | Configured window in seconds |
+
+**Sending the event**
+
+- **By default**, the same **no-op** implementation as for ACCESS_DENIED is used (DEBUG log only).
+- When **`security.audit.url`** is set, the HTTP implementation POSTs both ACCESS_DENIED and RATE_LIMIT_EXCEEDED events to that URL. IDS or audit-log can consume the same endpoint.
+
+### 6.5 Implementation notes
+
+- Rate limiting uses an **in-memory** store (per gateway instance). With multiple gateway instances, limits are **per instance**, not global.
+- **X-Forwarded-For**: When the gateway is behind a proxy, the first value in the header is used as the client IP. Document trust boundaries (e.g. only trust when the gateway is not directly exposed) to avoid spoofing.
+
+---
+
+## 7. Routing configuration
 
 The main routes are defined in `application.yml`:
 
@@ -178,7 +233,7 @@ through the gateway without changing the downstream endpoints.
 
 ---
 
-## 7. Tests
+## 8. Tests
 
 Main test classes:
 
@@ -193,12 +248,16 @@ Main test classes:
    - RBAC service: path outside patient resources → allowed; allowed role on patient path → allowed; disallowed role (e.g. PATIENT on GET `/api/patients`) → denied; `resolveResource`, `resolveAction`, `extractResourceId` behaviour.
    - RBAC filter: path out of scope → chain called; allowed role on patient path → chain called, no 403; denied role → 403, JSON body `{"error":"Forbidden"}`, chain not called, `SecurityAuditSender.sendAccessDenied` invoked (mock). No `X-Username` on patient path → chain called (RBAC skips).
 
-3. **JwtVerificationServiceTest**
+3. **RateLimitStoreTest** / **RateLimitFilterTest**
+   - Rate limit store: under limit → allowed; over limit in window → denied; different keys independent; after window expires → allowed again.
+   - Rate limit filter: excluded path → chain called, no quota consumed; under limit → chain called; over IP limit → 429, JSON body, `SecurityAuditSender.sendRateLimitExceeded` invoked with keyType IP; over user limit (with `X-User-Id`) → 429, audit with keyType USER.
+
+4. **JwtVerificationServiceTest**
    - Valid token (same secret as auth-service) → claims returned (username, roles, userId, staffId).
    - Expired, malformed, or wrong-secret token → `Optional.empty()`.
    - Null or blank token → `Optional.empty()`.
 
-4. **GatewayRoutesConfigTest**
+5. **GatewayRoutesConfigTest**
    - Spring Boot test that starts the gateway context and autowires the `RouteLocator`.
    - Verifies that the gateway defines routes for **all** core KIT COMMUN services:
      `auth-service`, `patient-service`, `staff-service`,
@@ -217,7 +276,7 @@ For full end-to-end verification in Docker:
    curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/patients/1
    # Expect 401
    ```
-3. **With a valid token** (obtain via `POST http://localhost:8080/api/auth/login`), the same path should be forwarded and return 200 or 404 from the backend; if the user’s role is not allowed for that action on a patient-dossier path, the gateway returns **403** (no call to the backend) and emits an ACCESS_DENIED audit event.
+3. **With a valid token** (obtain via `POST http://localhost:8080/api/auth/login`), the same path should be forwarded and return 200 or 404 from the backend; if the user’s role is not allowed for that action on a patient-dossier path, the gateway returns **403** (no call to the backend) and emits an ACCESS_DENIED audit event. If the client or user exceeds the rate limit, the gateway returns **429** and emits a RATE_LIMIT_EXCEEDED event.
    ```bash
    curl -H "Authorization: Bearer <accessToken>" http://localhost:8080/api/patients/1
    ```

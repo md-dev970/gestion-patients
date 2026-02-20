@@ -86,7 +86,15 @@ spring:
 jwt:
   secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWtleS1mb3Itand0LXRva2VuLWdlbmVyYXRpb24tMjU2Yml0cw==}
 
-# Optional: send ACCESS_DENIED audit events to security-audit-log (no-op if unset)
+# Rate limiting (US1.4): per IP and per user, configurable limits
+rate-limit:
+  requests-per-minute-per-ip: ${RATE_LIMIT_REQUESTS_PER_MINUTE_PER_IP:100}
+  requests-per-minute-per-user: ${RATE_LIMIT_REQUESTS_PER_MINUTE_PER_USER:100}
+  window-seconds: ${RATE_LIMIT_WINDOW_SECONDS:60}
+  excluded-paths:
+    - /actuator/health
+
+# Optional: send ACCESS_DENIED / RATE_LIMIT_EXCEEDED to security-audit-log or IDS (no-op if unset)
 # security:
 #   audit:
 #     url: http://security-audit-log:8080/api/events

@@ -24,4 +24,12 @@ public class NoOpSecurityAuditSender implements SecurityAuditSender {
                     userId, resourceType, resourceId, action, reason);
         }
     }
+
+    @Override
+    public void sendRateLimitExceeded(String keyType, String key, long limit, long windowSeconds) {
+        if (log.isDebugEnabled()) {
+            log.debug("RATE_LIMIT_EXCEEDED (no-op audit): keyType={}, key={}, limit={}, windowSeconds={}",
+                    keyType, key, limit, windowSeconds);
+        }
+    }
 }

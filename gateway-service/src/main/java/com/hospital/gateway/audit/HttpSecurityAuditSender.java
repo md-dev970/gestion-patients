@@ -56,4 +56,25 @@ public class HttpSecurityAuditSender implements SecurityAuditSender {
                 .onErrorResume(e -> Mono.empty())
                 .subscribe();
     }
+
+    @Override
+    public void sendRateLimitExceeded(String keyType, String key, long limit, long windowSeconds) {
+        Map<String, Object> payload = Map.of(
+                "eventType", "RATE_LIMIT_EXCEEDED",
+                "timestamp", Instant.now().toString(),
+                "keyType", keyType != null ? keyType : "",
+                "key", key != null ? key : "",
+                "limit", limit,
+                "windowSeconds", windowSeconds
+        );
+        webClient.post()
+                .uri(auditUrl)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(payload)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .doOnError(e -> log.warn("Failed to send RATE_LIMIT_EXCEEDED to audit log: {}", e.getMessage()))
+                .onErrorResume(e -> Mono.empty())
+                .subscribe();
+    }
 }
