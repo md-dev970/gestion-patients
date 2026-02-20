@@ -26,6 +26,19 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# ANTI-BRUTEFORCE (US1.5)
+# ═══════════════════════════════════════════════════════════════════════════════
+auth:
+  bruteforce:
+    max-failed-attempts: ${AUTH_BRUTEFORCE_MAX_FAILED_ATTEMPTS:5}
+    lockout-duration-minutes: ${AUTH_BRUTEFORCE_LOCKOUT_DURATION_MINUTES:15}
+
+# Optional: send ACCOUNT_LOCKED/BRUTEFORCE events to IDS/audit (no-op if unset)
+# security:
+#   audit:
+#     url: http://security-audit-log:8080/api/events
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # JWT CONFIGURATION
 # La clé secrète doit être encodée en Base64 et avoir au moins 256 bits
 # ═══════════════════════════════════════════════════════════════════════════════

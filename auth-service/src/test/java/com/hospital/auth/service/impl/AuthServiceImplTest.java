@@ -1,8 +1,11 @@
 package com.hospital.auth.service.impl;
 
+import com.hospital.auth.audit.SecurityAuditSender;
+import com.hospital.auth.config.BruteforceProperties;
 import com.hospital.auth.dto.AuthResponse;
 import com.hospital.auth.dto.LoginRequest;
 import com.hospital.auth.dto.RegisterRequest;
+import com.hospital.auth.exception.AccountTemporarilyLockedException;
 import com.hospital.auth.model.Role;
 import com.hospital.auth.model.User;
 import com.hospital.auth.repository.UserRepository;
@@ -16,12 +19,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -37,6 +42,12 @@ class AuthServiceImplTest {
 
     @Mock
     private JwtService jwtService;
+
+    @Mock
+    private BruteforceProperties bruteforceProperties;
+
+    @Mock
+    private SecurityAuditSender securityAuditSender;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -72,6 +83,8 @@ class AuthServiceImplTest {
                 .roles(Set.of(Role.ROLE_PATIENT))
                 .enabled(true)
                 .accountNonLocked(true)
+                .failedAttempts(0)
+                .lockoutEnd(null)
                 .build();
     }
 
@@ -202,6 +215,7 @@ class AuthServiceImplTest {
         // Given
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123", hashedPassword)).thenReturn(false);
+        when(bruteforceProperties.getMaxFailedAttempts()).thenReturn(5);
 
         // When/Then
         assertThatThrownBy(() -> authService.login(loginRequest))
@@ -213,36 +227,84 @@ class AuthServiceImplTest {
     }
 
     @Test
-    @DisplayName("login - disabled account - throws RuntimeException")
-    void login_disabledAccount_throwsRuntimeException() {
-        // Given
-        user.setEnabled(false);
+    @DisplayName("login - N failed attempts - locks account and throws AccountTemporarilyLockedException and sends audit")
+    void login_nFailedAttempts_locksAccountAndSendsAudit() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123", hashedPassword)).thenReturn(false);
+        when(bruteforceProperties.getMaxFailedAttempts()).thenReturn(3);
+        when(bruteforceProperties.getLockoutDurationMinutes()).thenReturn(15);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // 1st and 2nd failure: Invalid credentials
+        for (int i = 0; i < 2; i++) {
+            user.setFailedAttempts(i);
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+            assertThatThrownBy(() -> authService.login(loginRequest))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Invalid credentials");
+        }
+        verify(securityAuditSender, never()).sendAccountLocked(anyLong(), any(), any());
+
+        // 3rd failure: lock and AccountTemporarilyLockedException
+        user.setFailedAttempts(2);
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+        assertThatThrownBy(() -> authService.login(loginRequest))
+                .isInstanceOf(AccountTemporarilyLockedException.class)
+                .hasMessageContaining("Account temporarily locked");
+        verify(securityAuditSender).sendAccountLocked(eq(1L), eq("testuser"), eq("BRUTEFORCE"));
+        verify(userRepository, atLeast(1)).save(argThat(u -> u.getFailedAttempts() == 3 && !u.isAccountNonLocked() && u.getLockoutEnd() != null));
+    }
+
+    @Test
+    @DisplayName("login - success after failures - resets failedAttempts and lockoutEnd")
+    void login_successAfterFailures_resetsState() {
+        user.setFailedAttempts(2);
+        user.setLockoutEnd(null);
+        user.setAccountNonLocked(true);
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123", hashedPassword)).thenReturn(true);
+        when(jwtService.generateToken(user)).thenReturn(accessToken);
+        when(jwtService.generateRefreshToken(user)).thenReturn(refreshToken);
+        when(jwtService.getExpirationTime()).thenReturn(3600L);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AuthResponse result = authService.login(loginRequest);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getAccessToken()).isEqualTo(accessToken);
+        verify(userRepository).save(argThat(u -> u.getFailedAttempts() == 0 && u.getLockoutEnd() == null && u.isAccountNonLocked()));
+    }
+
+    @Test
+    @DisplayName("login - disabled account - throws RuntimeException")
+    void login_disabledAccount_throwsRuntimeException() {
+        // Given (enabled check happens after lock check, before password)
+        user.setEnabled(false);
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
 
         // When/Then
         assertThatThrownBy(() -> authService.login(loginRequest))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Account is disabled");
         verify(userRepository).findByUsername("testuser");
-        verify(passwordEncoder).matches("password123", hashedPassword);
+        verify(passwordEncoder, never()).matches(any(), any());
         verify(jwtService, never()).generateToken(any());
     }
 
     @Test
-    @DisplayName("login - locked account - throws RuntimeException")
-    void login_lockedAccount_throwsRuntimeException() {
-        // Given
+    @DisplayName("login - locked account - throws AccountTemporarilyLockedException")
+    void login_lockedAccount_throwsAccountTemporarilyLockedException() {
+        // Given: account locked with lockoutEnd in the future (we throw before password check)
         user.setAccountNonLocked(false);
+        user.setLockoutEnd(LocalDateTime.now().plusMinutes(5));
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("password123", hashedPassword)).thenReturn(true);
 
         // When/Then
         assertThatThrownBy(() -> authService.login(loginRequest))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Account is locked");
+                .isInstanceOf(AccountTemporarilyLockedException.class)
+                .hasMessageContaining("Account temporarily locked");
         verify(userRepository).findByUsername("testuser");
-        verify(passwordEncoder).matches("password123", hashedPassword);
+        verify(passwordEncoder, never()).matches(any(), any());
         verify(jwtService, never()).generateToken(any());
     }
 

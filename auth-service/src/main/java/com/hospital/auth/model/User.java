@@ -86,6 +86,19 @@ public class User {
     @Column(name = "account_non_locked")
     private boolean accountNonLocked = true;
 
+    /**
+     * Number of consecutive failed login attempts (anti-bruteforce).
+     */
+    @Column(name = "failed_attempts", nullable = false)
+    @Builder.Default
+    private int failedAttempts = 0;
+
+    /**
+     * End of temporary lockout window (null if not locked).
+     */
+    @Column(name = "lockout_end")
+    private LocalDateTime lockoutEnd;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

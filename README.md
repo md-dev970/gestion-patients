@@ -51,7 +51,7 @@ Ce projet est une implémentation complète du **Kit Commun** pour le système d
 
 | Service | Port | Description |
 |---------|------|-------------|
-| **auth-service** | 8085 | Authentification JWT, gestion des utilisateurs et rôles |
+| **auth-service** | 8085 | Authentification JWT, gestion des utilisateurs et rôles ; protection anti-bruteforce (US1.5, voir auth-service/AUTH-SECURITY.md) |
 | **patient-service** | 8081 | CRUD patients, recherche |
 | **consultations-service** | 8086 | Gestion des consultations médicales |
 | **staff-service** | 8082 | Gestion du personnel (médecins, infirmiers) |

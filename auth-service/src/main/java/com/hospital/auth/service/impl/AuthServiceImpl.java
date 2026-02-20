@@ -1,8 +1,11 @@
 package com.hospital.auth.service.impl;
 
+import com.hospital.auth.audit.SecurityAuditSender;
+import com.hospital.auth.config.BruteforceProperties;
 import com.hospital.auth.dto.AuthResponse;
 import com.hospital.auth.dto.LoginRequest;
 import com.hospital.auth.dto.RegisterRequest;
+import com.hospital.auth.exception.AccountTemporarilyLockedException;
 import com.hospital.auth.model.Role;
 import com.hospital.auth.model.User;
 import com.hospital.auth.repository.UserRepository;
@@ -14,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,6 +40,8 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final BruteforceProperties bruteforceProperties;
+    private final SecurityAuditSender securityAuditSender;
 
     @Override
     public AuthResponse register(RegisterRequest request) {
@@ -68,6 +74,8 @@ public class AuthServiceImpl implements AuthService {
                 .roles(roles)
                 .enabled(true)
                 .accountNonLocked(true)
+                .failedAttempts(0)
+                .lockoutEnd(null)
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -96,22 +104,48 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Vérifier le mot de passe
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            log.warn("Invalid password for user: {}", request.getUsername());
-            throw new RuntimeException("Invalid credentials");
+        // Check existing lock: unlock if lockout has expired
+        if (!user.isAccountNonLocked() && user.getLockoutEnd() != null) {
+            LocalDateTime now = LocalDateTime.now();
+            if (now.isBefore(user.getLockoutEnd())) {
+                throw new AccountTemporarilyLockedException("Account temporarily locked");
+            }
+            // Lock expired: unlock and continue
+            user.setFailedAttempts(0);
+            user.setLockoutEnd(null);
+            user.setAccountNonLocked(true);
+            userRepository.save(user);
         }
 
-        // Vérifier le statut du compte
         if (!user.isEnabled()) {
             throw new RuntimeException("Account is disabled");
         }
 
-        if (!user.isAccountNonLocked()) {
-            throw new RuntimeException("Account is locked");
+        // Check password
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            log.warn("Invalid password for user: {}", request.getUsername());
+            int attempts = user.getFailedAttempts() + 1;
+            user.setFailedAttempts(attempts);
+            int maxAttempts = bruteforceProperties.getMaxFailedAttempts();
+            if (attempts >= maxAttempts) {
+                LocalDateTime lockoutEnd = LocalDateTime.now()
+                        .plusMinutes(bruteforceProperties.getLockoutDurationMinutes());
+                user.setLockoutEnd(lockoutEnd);
+                user.setAccountNonLocked(false);
+                userRepository.save(user);
+                securityAuditSender.sendAccountLocked(user.getId(), user.getUsername(), "BRUTEFORCE");
+                throw new AccountTemporarilyLockedException("Account temporarily locked");
+            }
+            userRepository.save(user);
+            throw new RuntimeException("Invalid credentials");
         }
 
-        // Générer les tokens JWT
+        // Success: reset failed attempts and lock
+        user.setFailedAttempts(0);
+        user.setLockoutEnd(null);
+        user.setAccountNonLocked(true);
+        userRepository.save(user);
+
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
