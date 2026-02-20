@@ -1,4 +1,0 @@
-com\hospital\gateway\filter\InputValidationFilter.class
-com\hospital\gateway\config\InputValidationProperties.class
-com\hospital\gateway\validation\InjectionPatterns$PatternWithCategory.class
-com\hospital\gateway\validation\InjectionPatterns.class

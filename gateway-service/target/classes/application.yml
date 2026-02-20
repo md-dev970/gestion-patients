@@ -4,9 +4,8 @@
 
 server:
   port: 8080
-  # HTTPS/TLS support for the gateway.
-  # By default, SSL is disabled. To enable HTTPS, set SERVER_SSL_ENABLED=true
-  # and provide key store configuration via environment variables.
+  # HTTPS/TLS support (T1.2). By default SSL is disabled. To enable HTTPS set
+  # SERVER_SSL_ENABLED=true and provide a key store (or use dev keystore from scripts/generate-dev-keystore).
   ssl:
     enabled: ${SERVER_SSL_ENABLED:false}
     key-store: ${SERVER_SSL_KEY_STORE:}
@@ -89,9 +88,12 @@ spring:
               - OPTIONS
             allowedHeaders: "*"
 
-# JWT: same secret as auth-service so gateway can verify tokens (HS256)
+# JWT verification (T1.3): prefer public key from Secrets (RS256); fallback to shared secret (HS256)
 jwt:
   secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWtleS1mb3Itand0LXRva2VuLWdlbmVyYXRpb24tMjU2Yml0cw==}
+  # Public key (PEM) for RS256 verification – from Secrets (env JWT_PUBLIC_KEY or mounted file)
+  public-key: ${JWT_PUBLIC_KEY:}
+  public-key-location: ${JWT_PUBLIC_KEY_LOCATION:}
 
 # Rate limiting (US1.4): per IP and per user, configurable limits
 rate-limit:

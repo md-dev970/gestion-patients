@@ -107,8 +107,14 @@ When TLS is enabled in Docker, set the SSL environment variables and mount the k
 
 The gateway verifies a JWT on **every request** except for public paths.
 
-- **Algorithm**: HS256 (same as auth-service). Tokens are issued by auth-service and verified by the gateway using a **shared secret**.
-- **Configuration**: In `application.yml`, `jwt.secret` must be the same Base64-encoded secret as in auth-service. It can be overridden with the `JWT_SECRET` environment variable (e.g. in Docker) so both services use the same value.
+- **Algorithms** (T1.3):
+  - **RS256** (recommended for production): When a **public key** is provided, the gateway verifies tokens with RS256. The auth-service signs tokens with the corresponding **private key** (from its own Secrets). The gateway only needs the **public key** (from Secrets: env `JWT_PUBLIC_KEY` or file `JWT_PUBLIC_KEY_LOCATION`). No shared secret is required.
+  - **HS256** (default when no public key is set): Tokens are verified using a **shared secret** (`jwt.secret` / `JWT_SECRET`), same as auth-service.
+- **Configuration**:
+  - **RS256**: Set `JWT_PUBLIC_KEY` to the PEM string (e.g. from Secrets), or `JWT_PUBLIC_KEY_LOCATION` to a file path (mounted from Secrets). In `application.yml`: `jwt.public-key` and `jwt.public-key-location` (empty by default).
+  - **HS256**: `jwt.secret` must be the same Base64-encoded secret as in auth-service; override with `JWT_SECRET` in Docker/Secrets.
+- **Key generation (RS256)**: Use the provided script to generate an RSA key pair. Give the **private key** to auth-service (Secrets: `JWT_PRIVATE_KEY` or `JWT_PRIVATE_KEY_LOCATION`) and the **public key** to the gateway (Secrets: `JWT_PUBLIC_KEY` or `JWT_PUBLIC_KEY_LOCATION`).
+  - From project root: `./gateway-service/scripts/generate-jwt-rs256-keys.sh` (Linux/macOS) or `gateway-service\scripts\generate-jwt-rs256-keys.bat` (Windows, requires OpenSSL). Output: `gateway-service/build/jwt-keys/private.pem` (auth), `public.pem` (gateway). **Do not commit** `private.pem`.
 - **Public paths** (no token required):
   - `/api/auth/login`
   - `/api/auth/register`
@@ -120,7 +126,7 @@ The gateway verifies a JWT on **every request** except for public paths.
   - `X-Username`: subject (username)
   - `X-User-Roles`: comma-separated list of roles
 
-**Shared secret**: In development, the default `jwt.secret` in `application.yml` matches auth-service. In Docker/production, set the same `JWT_SECRET` (or equivalent) for both gateway-service and auth-service so that tokens issued by auth-service are accepted by the gateway.
+**Shared secret (HS256 only)**: In development, the default `jwt.secret` in `application.yml` matches auth-service. In Docker/production with HS256, set the same `JWT_SECRET` for both gateway-service and auth-service. When using RS256, the gateway uses only the public key and does not need `jwt.secret`.
 
 ---
 
