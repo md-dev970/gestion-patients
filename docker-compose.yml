@@ -142,6 +142,7 @@ services:
     networks:
       - hospital-network
 
+  # Security gateway (reverse proxy) – T1.1
   gateway-service:
     build:
       context: ./gateway-service
@@ -155,6 +156,11 @@ services:
     depends_on:
       discovery-service:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     networks:
       - hospital-network
 

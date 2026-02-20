@@ -20,6 +20,13 @@ spring:
 
   cloud:
     gateway:
+      # US1.7: security headers on all responses (HSTS, X-Content-Type-Options, X-Frame-Options, etc.)
+      default-filters:
+        - name: SecureHeaders
+      # When SSL is disabled, HSTS is not sent (override in prod when HTTPS is on)
+      filter:
+        secure-headers:
+          disable: strict-transport-security
       routes:
         # AUTH SERVICE - Authentification JWT
         - id: auth-service

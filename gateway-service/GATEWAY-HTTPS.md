@@ -7,6 +7,8 @@ for the KIT COMMUN microservices and how HTTPS support and tests are set up.
 
 ## 1. Role of `gateway-service`
 
+This service is the **security-gateway** (reverse proxy) for the KIT COMMUN stack (T1.1). All client traffic goes through it before reaching backend microservices.
+
 - Technology: **Spring Cloud Gateway** (reactive, with Eureka discovery).
 - Default listening port: **8080**.
 - Responsibility:
@@ -42,6 +44,9 @@ Result:
 
 - From outside Docker, clients can only reach the system at:  
   `http://localhost:8080/...` (and, when configured, via HTTPS).
+
+**Verifying the reverse proxy is operational (T1.1)**  
+After starting the stack (`docker-compose up -d --build`), wait for the gateway to be healthy. Then: (1) `curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health` → expect **200**; (2) `curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/patients/1` → expect **401** (no token; confirms the request went through the gateway). See [SECURITY-GATEWAY.md](SECURITY-GATEWAY.md) for the full runbook.
 
 ---
 
@@ -265,7 +270,36 @@ Each 400 from the input validation filter triggers a **SUSPICIOUS_INPUT** event.
 
 ---
 
-## 8. Routing configuration
+## 8. Security response headers (US1.7)
+
+The gateway adds **security headers** to all responses (gateway-generated and proxied) using Spring Cloud Gateway’s built-in **SecureHeaders** filter applied via `default-filters`. Every client-facing response includes the required headers.
+
+### 8.1 Headers added
+
+| Header | Value | Description |
+|--------|--------|-------------|
+| **X-Content-Type-Options** | `nosniff` | Prevents MIME-type sniffing (required by US1.7). |
+| **X-Frame-Options** | `DENY` | Prevents clickjacking (required by US1.7). |
+| **Strict-Transport-Security** (HSTS) | `max-age=...` | Enforces HTTPS on subsequent visits (required by US1.7). Sent only when not disabled (see below). |
+| X-XSS-Protection | `1; mode=block` | Legacy XSS filter hint. |
+| Referrer-Policy | `no-referrer` | Controls referrer information. |
+| Content-Security-Policy | (default) | Restricts resource loading. |
+| X-Download-Options | `noopen` | Prevents opening downloads in browser context. |
+| X-Permitted-Cross-Domain-Policies | `none` | Restricts cross-domain policy. |
+
+### 8.2 Implementation and configuration
+
+- **Implementation**: In `application.yml`, `spring.cloud.gateway.default-filters` includes `SecureHeaders`, so the filter runs for every route. No custom Java filter is required.
+- **HSTS when SSL is disabled**: By default, **Strict-Transport-Security** is **disabled** via `spring.cloud.gateway.filter.secure-headers.disable: strict-transport-security` so that when the gateway serves HTTP (e.g. local/dev), HSTS is not sent. When you enable HTTPS (e.g. in production), remove `strict-transport-security` from the `disable` list (or override in a profile) so that HSTS is sent.
+- **Customisation**: Header values can be overridden under `spring.cloud.gateway.filter.secure-headers` (e.g. `strict-transport-security`, `frame-options`, `content-type-options`). See [SecureHeaders GatewayFilter Factory](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/gatewayfilter-factories/secureheaders-factory.html).
+
+### 8.3 Verification
+
+- **Manual**: `curl -I http://localhost:8080/api/patients/1` — expect 401 with `X-Content-Type-Options`, `X-Frame-Options` (and other secure headers). HSTS will be absent when the default config disables it.
+
+---
+
+## 9. Routing configuration
 
 The main routes are defined in `application.yml`:
 
@@ -281,7 +315,7 @@ through the gateway without changing the downstream endpoints.
 
 ---
 
-## 9. Tests
+## 10. Tests
 
 Main test classes:
 

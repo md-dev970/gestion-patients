@@ -56,8 +56,19 @@ Ce projet est une implémentation complète du **Kit Commun** pour le système d
 | **consultations-service** | 8086 | Gestion des consultations médicales |
 | **staff-service** | 8082 | Gestion du personnel (médecins, infirmiers) |
 | **appointment-service** | 8083 | Gestion des rendez-vous |
-| **gateway-service** | 8080 | Point d'entrée unique, routage, validation stricte des entrées (query/headers) et événements IDS SQLi/XSS (US1.6, voir gateway-service/GATEWAY-HTTPS.md) |
+| **gateway-service** | 8080 | **Security-gateway** (reverse proxy) et point d'entrée unique pour tout le trafic API ; routage, validation des entrées (US1.6), headers de sécurité (US1.7). Voir gateway-service/GATEWAY-HTTPS.md et gateway-service/SECURITY-GATEWAY.md (T1.1). |
 | **discovery-service** | 8761 | Eureka Server, découverte de services |
+
+### Security gateway (reverse proxy) – T1.1
+
+Le **security-gateway** est le service `gateway-service` (Spring Cloud Gateway). C’est le **reverse proxy** du stack : tout le trafic client passe par lui (port 8080) ; les microservices backend ne sont pas exposés sur l’hôte. Détails : [gateway-service/GATEWAY-HTTPS.md](gateway-service/GATEWAY-HTTPS.md) et [gateway-service/SECURITY-GATEWAY.md](gateway-service/SECURITY-GATEWAY.md).
+
+**Stack** : Discovery (Eureka) → Gateway (Spring Cloud Gateway) → services backend. Seul le gateway expose le port 8080 sur l’hôte.
+
+**Vérifier que le reverse proxy est opérationnel** (après `docker-compose up -d --build`, attendre que le gateway soit healthy ou quelques secondes) :
+
+1. `curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health` → attendu **200**
+2. `curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/patients/1` → attendu **401** (pas de token ; prouve que la requête passe par le gateway)
 
 ## 🚀 Démarrage Rapide
 
@@ -237,9 +248,9 @@ Chaque service a son propre `application.yml` avec :
 - Configuration Eureka
 - JWT secrets (pour auth-service)
 
-### Validation des entrées (US1.6)
+### Validation des entrées (US1.6) et headers de sécurité (US1.7)
 
-- **Gateway** : les paramètres de requête (query) et les en-têtes (sauf `Authorization`) sont analysés pour détecter des motifs d’injection (SQLi, XSS). Une requête suspecte (ex. `?query=OR 1=1`) reçoit **400 Bad Request** et un événement **SUSPICIOUS_INPUT** est envoyé vers l’IDS/audit si `security.audit.url` est configuré. Détails : `gateway-service/GATEWAY-HTTPS.md` section 7.
+- **Gateway** : les paramètres de requête (query) et les en-têtes (sauf `Authorization`) sont analysés pour détecter des motifs d’injection (SQLi, XSS). Une requête suspecte (ex. `?query=OR 1=1`) reçoit **400 Bad Request** et un événement **SUSPICIOUS_INPUT** est envoyé vers l’IDS/audit si `security.audit.url` est configuré. Toutes les réponses incluent des headers de sécurité (HSTS si HTTPS, X-Content-Type-Options, X-Frame-Options). Détails : `gateway-service/GATEWAY-HTTPS.md` (sections 7 et 8).
 - **Services** : la structure des corps de requête est validée via Bean Validation (`@Valid`) sur les DTOs ; les erreurs de validation renvoient **400**.
 
 ### Bases de données
