@@ -130,9 +130,9 @@ The gateway verifies a JWT on **every request** except for public paths.
 
 ---
 
-## 5. RBAC on patient dossiers (US1.3)
+## 5. RBAC on patient dossiers (US1.3 / T1.4)
 
-After authentication, the gateway applies **role-based access control (RBAC)** on requests to patient-dossier resources. This is enforced only in the gateway; no change is made to KIT COMMUN controllers or business logic.
+After authentication, the gateway applies **role-based access control (RBAC)** on requests to patient-dossier resources. The **RBAC engine** (T1.4) evaluates rules by role, resource, and action; the allow/deny decision is taken **before** the request is proxied to the backend. This is enforced only in the gateway; no change is made to KIT COMMUN controllers or business logic.
 
 ### 5.1 Paths under RBAC
 

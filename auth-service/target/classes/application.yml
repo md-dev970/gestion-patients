@@ -39,12 +39,14 @@ auth:
 #     url: http://security-audit-log:8080/api/events
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# JWT CONFIGURATION
-# La clé secrète doit être encodée en Base64 et avoir au moins 256 bits
+# JWT CONFIGURATION (T1.3: RS256 when private key set; else HS256)
 # ═══════════════════════════════════════════════════════════════════════════════
 jwt:
-  # Clé secrète encodée en Base64 (256 bits minimum pour HS256)
-  secret: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWtleS1mb3Itand0LXRva2VuLWdlbmVyYXRpb24tMjU2Yml0cw==
+  # Clé secrète encodée en Base64 (256 bits minimum pour HS256) – utilisée si pas de clé privée
+  secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWtleS1mb3Itand0LXRva2VuLWdlbmVyYXRpb24tMjU2Yml0cw==}
+  # Clé privée RSA (PEM) pour RS256 – depuis Secrets (env JWT_PRIVATE_KEY ou fichier)
+  private-key: ${JWT_PRIVATE_KEY:}
+  private-key-location: ${JWT_PRIVATE_KEY_LOCATION:}
   expiration: 3600000       # 1 heure en millisecondes
   refresh-expiration: 86400000  # 24 heures
 

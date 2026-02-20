@@ -4,8 +4,9 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Role/permission matrix for patient-dossier resources.
+ * RBAC engine: role/resource/action rules (T1.4).
  * Role names must match auth-service Role enum (ROLE_ADMIN, ROLE_DOCTOR, etc.).
+ * Allow/deny decision is applied in RbacAuthorizationFilter before proxying to backends.
  */
 public final class RbacPolicy {
 
