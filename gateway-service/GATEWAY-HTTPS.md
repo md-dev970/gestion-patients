@@ -103,7 +103,66 @@ The gateway verifies a JWT on **every request** except for public paths.
 
 ---
 
-## 5. Routing configuration
+## 5. RBAC on patient dossiers (US1.3)
+
+After authentication, the gateway applies **role-based access control (RBAC)** on requests to patient-dossier resources. This is enforced only in the gateway; no change is made to KIT COMMUN controllers or business logic.
+
+### 5.1 Paths under RBAC
+
+Only the following path prefixes are subject to this RBAC:
+
+- **`/api/patients/**`** – patient CRUD and search
+- **`/api/medical-records/**`** – medical records
+- **`/api/consultations/**`** – consultations
+
+All other paths (e.g. `/api/auth/**`, `/api/staff/**`, `/api/appointments/**`) are **not** checked by this RBAC filter; they are only subject to authentication (valid JWT).
+
+### 5.2 Role / permission matrix
+
+Actions are derived from the HTTP method: **GET → READ**, **POST → CREATE**, **PUT/PATCH → UPDATE**, **DELETE → DELETE**.
+
+| Resource          | READ | CREATE | UPDATE | DELETE |
+|-------------------|------|--------|--------|--------|
+| **PATIENTS**      | ADMIN, MEDECIN, DOCTOR, INFIRMIER, NURSE, RECEPTIONIST, LAB_TECH | ADMIN, MEDECIN, DOCTOR, NURSE, RECEPTIONIST | ADMIN, MEDECIN, DOCTOR, NURSE | ADMIN only |
+| **MEDICAL_RECORDS** | ADMIN, MEDECIN, DOCTOR, INFIRMIER, NURSE, LAB_TECH | ADMIN, MEDECIN, DOCTOR, NURSE, LAB_TECH | ADMIN, MEDECIN, DOCTOR, NURSE | ADMIN only |
+| **CONSULTATIONS** | ADMIN, MEDECIN, DOCTOR, INFIRMIER, NURSE | ADMIN, MEDECIN, DOCTOR, NURSE | ADMIN, MEDECIN, DOCTOR, NURSE | ADMIN only |
+
+Role names in the JWT (and in `X-User-Roles`) must match the auth-service `Role` enum: `ROLE_ADMIN`, `ROLE_MEDECIN`, `ROLE_DOCTOR`, `ROLE_INFIRMIER`, `ROLE_NURSE`, `ROLE_RECEPTIONIST`, `ROLE_LAB_TECH`, `ROLE_PATIENT`. **ROLE_PATIENT** has **no** access to these patient-dossier paths in the current policy (no “own dossier only” claim in the JWT by default).
+
+### 5.3 Denied access: 403 and audit
+
+- If the authenticated user’s roles do **not** allow the requested action on the resource, the gateway:
+  1. Responds with **403 Forbidden**.
+  2. Sets **`Content-Type: application/json`** and a JSON body: `{"error":"Forbidden"}` (generic message).
+  3. Does **not** call the downstream service (request is not proxied).
+  4. Emits an **ACCESS_DENIED** audit event (see below).
+
+Filter order: **AuthenticationFilter** (order -100) runs first (401 if no/invalid token); **RbacAuthorizationFilter** (order -50) runs next (403 if not allowed).
+
+### 5.4 ACCESS_DENIED audit event
+
+Every 403 from the RBAC filter triggers an **ACCESS_DENIED** event. The payload is **pseudonymised** (no PII/PHI: no patient name, no diagnosis).
+
+| Field          | Description |
+|----------------|-------------|
+| `eventType`    | `"ACCESS_DENIED"` |
+| `timestamp`    | ISO-8601 instant |
+| `userId`       | Technical user ID (from JWT / `X-User-Id`) |
+| `resourceType` | `PATIENTS` \| `MEDICAL_RECORDS` \| `CONSULTATIONS` |
+| `resourceId`   | ID extracted from path when applicable (e.g. patient or record id), or empty |
+| `action`       | `READ` \| `CREATE` \| `UPDATE` \| `DELETE` |
+| `reason`       | e.g. `"RBAC_DENY"` |
+
+**Sending the event**
+
+- **By default**, no external service is called: the gateway uses a **no-op** implementation of the audit sender (optional DEBUG log only).
+- To send events to a **security-audit-log** service, set in configuration:
+  - **`security.audit.url`** to the audit endpoint URL (e.g. `http://security-audit-log:8080/api/events`).  
+  When this property is set, the gateway uses an HTTP implementation that POSTs the JSON payload to that URL (fire-and-forget, non-blocking). If the service is not yet deployed, leave the property unset so that the no-op remains in use.
+
+---
+
+## 6. Routing configuration
 
 The main routes are defined in `application.yml`:
 
@@ -119,7 +178,7 @@ through the gateway without changing the downstream endpoints.
 
 ---
 
-## 6. Tests
+## 7. Tests
 
 Main test classes:
 
@@ -130,12 +189,16 @@ Main test classes:
    - Private path with invalid or malformed token → **401**, `chain.filter` not called.
    - Private path with valid token (mocked claims) → `chain.filter` called with mutated request containing `X-User-Id`, `X-Username`, `X-User-Roles`.
 
-2. **JwtVerificationServiceTest**
+2. **RbacServiceTest** / **RbacAuthorizationFilterTest**
+   - RBAC service: path outside patient resources → allowed; allowed role on patient path → allowed; disallowed role (e.g. PATIENT on GET `/api/patients`) → denied; `resolveResource`, `resolveAction`, `extractResourceId` behaviour.
+   - RBAC filter: path out of scope → chain called; allowed role on patient path → chain called, no 403; denied role → 403, JSON body `{"error":"Forbidden"}`, chain not called, `SecurityAuditSender.sendAccessDenied` invoked (mock). No `X-Username` on patient path → chain called (RBAC skips).
+
+3. **JwtVerificationServiceTest**
    - Valid token (same secret as auth-service) → claims returned (username, roles, userId, staffId).
    - Expired, malformed, or wrong-secret token → `Optional.empty()`.
    - Null or blank token → `Optional.empty()`.
 
-3. **GatewayRoutesConfigTest**
+4. **GatewayRoutesConfigTest**
    - Spring Boot test that starts the gateway context and autowires the `RouteLocator`.
    - Verifies that the gateway defines routes for **all** core KIT COMMUN services:
      `auth-service`, `patient-service`, `staff-service`,
@@ -154,7 +217,7 @@ For full end-to-end verification in Docker:
    curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/patients/1
    # Expect 401
    ```
-3. **With a valid token** (obtain via `POST http://localhost:8080/api/auth/login`), the same path should be forwarded and return 200 or 403 depending on the backend:
+3. **With a valid token** (obtain via `POST http://localhost:8080/api/auth/login`), the same path should be forwarded and return 200 or 404 from the backend; if the user’s role is not allowed for that action on a patient-dossier path, the gateway returns **403** (no call to the backend) and emits an ACCESS_DENIED audit event.
    ```bash
    curl -H "Authorization: Bearer <accessToken>" http://localhost:8080/api/patients/1
    ```

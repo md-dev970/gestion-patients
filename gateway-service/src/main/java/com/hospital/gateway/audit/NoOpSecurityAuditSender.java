@@ -1,0 +1,27 @@
+package com.hospital.gateway.audit;
+
+import com.hospital.gateway.rbac.Action;
+import com.hospital.gateway.rbac.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.stereotype.Component;
+
+/**
+ * No-op implementation of SecurityAuditSender. Logs at DEBUG when ACCESS_DENIED would be sent.
+ * Used when security.audit.url is not set; when set, HttpSecurityAuditSender is @Primary.
+ */
+@Component
+@ConditionalOnMissingBean(name = "httpSecurityAuditSender")
+public class NoOpSecurityAuditSender implements SecurityAuditSender {
+
+    private static final Logger log = LoggerFactory.getLogger(NoOpSecurityAuditSender.class);
+
+    @Override
+    public void sendAccessDenied(String userId, Resource resourceType, String resourceId, Action action, String reason) {
+        if (log.isDebugEnabled()) {
+            log.debug("ACCESS_DENIED (no-op audit): userId={}, resourceType={}, resourceId={}, action={}, reason={}",
+                    userId, resourceType, resourceId, action, reason);
+        }
+    }
+}

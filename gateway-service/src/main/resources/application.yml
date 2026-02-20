@@ -86,6 +86,11 @@ spring:
 jwt:
   secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWtleS1mb3Itand0LXRva2VuLWdlbmVyYXRpb24tMjU2Yml0cw==}
 
+# Optional: send ACCESS_DENIED audit events to security-audit-log (no-op if unset)
+# security:
+#   audit:
+#     url: http://security-audit-log:8080/api/events
+
 eureka:
   client:
     service-url:
