@@ -30,7 +30,7 @@ class HttpSecurityAuditSenderTest {
         server.start();
         objectMapper = new ObjectMapper();
         String auditUrl = server.url("/api/events").toString();
-        sender = new HttpSecurityAuditSender(WebClient.builder(), auditUrl);
+        sender = new HttpSecurityAuditSender(WebClient.builder(), auditUrl, "");
     }
 
     @AfterEach

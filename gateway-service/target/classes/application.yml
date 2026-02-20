@@ -19,7 +19,7 @@ spring:
 
   cloud:
     gateway:
-      # US1.7: security headers on all responses (HSTS, X-Content-Type-Options, X-Frame-Options, etc.)
+      # US1.7 / T1.8: security headers on all responses (headers présents)
       default-filters:
         - name: SecureHeaders
       # When SSL is disabled, HSTS is not sent (override in prod when HTTPS is on)
@@ -115,10 +115,12 @@ input-validation:
   excluded-paths:
     - /actuator/health
 
-# Optional: send ACCESS_DENIED / RATE_LIMIT_EXCEEDED / SUSPICIOUS_INPUT to security-audit-log or IDS (no-op if unset)
+# T1.9: emit events to security-audit-log and ids-service (API). Format: see AUDIT-IDS-EVENTS.md
 # security:
 #   audit:
 #     url: http://security-audit-log:8080/api/events
+#   ids:
+#     url: http://ids-service:8080/api/events   # optional; IDS events also sent here
 
 eureka:
   client:

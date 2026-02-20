@@ -16,8 +16,9 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * Sends ACCESS_DENIED events to security-audit-log via HTTP POST.
- * Activated when security.audit.url is set.
+ * Sends events to security-audit-log and optionally to ids-service (T1.9).
+ * Activated when security.audit.url is set. When security.ids.url is set,
+ * RATE_LIMIT_EXCEEDED and SUSPICIOUS_INPUT are also POSTed to the IDS URL.
  */
 @Component
 @Primary
@@ -28,10 +29,13 @@ public class HttpSecurityAuditSender implements SecurityAuditSender {
 
     private final WebClient webClient;
     private final String auditUrl;
+    private final String idsUrl;
 
     public HttpSecurityAuditSender(WebClient.Builder webClientBuilder,
-                                   @Value("${security.audit.url}") String auditUrl) {
+                                   @Value("${security.audit.url}") String auditUrl,
+                                   @Value("${security.ids.url:}") String idsUrl) {
         this.auditUrl = auditUrl;
+        this.idsUrl = idsUrl != null && !idsUrl.isBlank() ? idsUrl.trim() : null;
         this.webClient = webClientBuilder.build();
     }
 
@@ -46,15 +50,7 @@ public class HttpSecurityAuditSender implements SecurityAuditSender {
                 "action", action.name(),
                 "reason", reason != null ? reason : "RBAC_DENY"
         );
-        webClient.post()
-                .uri(auditUrl)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(payload)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .doOnError(e -> log.warn("Failed to send ACCESS_DENIED to audit log: {}", e.getMessage()))
-                .onErrorResume(e -> Mono.empty())
-                .subscribe();
+        postToAudit(payload, "ACCESS_DENIED");
     }
 
     @Override
@@ -67,15 +63,10 @@ public class HttpSecurityAuditSender implements SecurityAuditSender {
                 "limit", limit,
                 "windowSeconds", windowSeconds
         );
-        webClient.post()
-                .uri(auditUrl)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(payload)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .doOnError(e -> log.warn("Failed to send RATE_LIMIT_EXCEEDED to audit log: {}", e.getMessage()))
-                .onErrorResume(e -> Mono.empty())
-                .subscribe();
+        postToAudit(payload, "RATE_LIMIT_EXCEEDED");
+        if (idsUrl != null) {
+            postToIds(payload, "RATE_LIMIT_EXCEEDED");
+        }
     }
 
     @Override
@@ -88,13 +79,32 @@ public class HttpSecurityAuditSender implements SecurityAuditSender {
                 "method", method != null ? method : "",
                 "category", category != null ? category : ""
         );
+        postToAudit(payload, "SUSPICIOUS_INPUT");
+        if (idsUrl != null) {
+            postToIds(payload, "SUSPICIOUS_INPUT");
+        }
+    }
+
+    private void postToAudit(Map<String, Object> payload, String eventLabel) {
         webClient.post()
                 .uri(auditUrl)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(payload)
                 .retrieve()
                 .bodyToMono(Void.class)
-                .doOnError(e -> log.warn("Failed to send SUSPICIOUS_INPUT to audit log: {}", e.getMessage()))
+                .doOnError(e -> log.warn("Failed to send {} to audit log: {}", eventLabel, e.getMessage()))
+                .onErrorResume(e -> Mono.empty())
+                .subscribe();
+    }
+
+    private void postToIds(Map<String, Object> payload, String eventLabel) {
+        webClient.post()
+                .uri(idsUrl)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(payload)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .doOnError(e -> log.warn("Failed to send {} to IDS: {}", eventLabel, e.getMessage()))
                 .onErrorResume(e -> Mono.empty())
                 .subscribe();
     }

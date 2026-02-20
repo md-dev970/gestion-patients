@@ -341,7 +341,18 @@ The gateway adds **security headers** (T1.8 – *headers présents*) to all resp
 
 ---
 
-## 9. Routing configuration
+## 9. Event emission – audit and IDS (T1.9)
+
+The gateway **emits events** toward **security-audit-log** and **ids-service** (API). Event **format** is defined in **[AUDIT-IDS-EVENTS.md](AUDIT-IDS-EVENTS.md)**.
+
+- **security.audit.url**: When set, all events (ACCESS_DENIED, RATE_LIMIT_EXCEEDED, SUSPICIOUS_INPUT) are POSTed to this URL (JSON body, fire-and-forget).
+- **security.ids.url** (optional): When set, **RATE_LIMIT_EXCEEDED** and **SUSPICIOUS_INPUT** are also POSTed to this URL (same payload as audit). Use for ids-service when deployed separately from security-audit-log.
+
+If neither URL is set, the no-op implementation is used (no network calls). See AUDIT-IDS-EVENTS.md for the exact JSON structure of each event type.
+
+---
+
+## 10. Routing configuration
 
 The main routes are defined in `application.yml`:
 
@@ -357,7 +368,7 @@ through the gateway without changing the downstream endpoints.
 
 ---
 
-## 10. Tests
+## 11. Tests
 
 Main test classes:
 
