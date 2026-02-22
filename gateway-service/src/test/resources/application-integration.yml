@@ -1,0 +1,24 @@
+# Profile for gateway integration tests (T1.10).
+# Disable Eureka so the gateway starts without discovery; filters are exercised before proxying.
+eureka:
+  client:
+    enabled: false
+    fetch-registry: false
+    register-with-eureka: false
+
+# JWT secret must match the one used to generate tokens in tests
+jwt:
+  secret: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWtleS1mb3Itand0LXRva2VuLWdlbmVyYXRpb24tMjU2Yml0cw==
+
+# Relax rate limit so integration tests do not hit 429
+rate-limit:
+  requests-per-minute-per-ip: 1000
+  requests-per-minute-per-user: 1000
+
+# Audit/IDS no-op in tests (no external calls)
+# security.audit.url and security.ids.url left unset
+
+logging:
+  level:
+    root: WARN
+    com.hospital.gateway: DEBUG

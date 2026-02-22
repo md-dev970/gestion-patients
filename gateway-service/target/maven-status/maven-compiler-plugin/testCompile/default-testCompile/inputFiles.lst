@@ -1,4 +1,5 @@
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\test\java\com\hospital\gateway\service\JwtVerificationServiceTest.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\test\java\com\hospital\gateway\GatewayIntegrationTest.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\test\java\com\hospital\gateway\validation\InjectionPatternsTest.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\test\java\com\hospital\gateway\filter\RbacAuthorizationFilterTest.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\gateway-service\src\test\java\com\hospital\gateway\service\RbacServiceTest.java

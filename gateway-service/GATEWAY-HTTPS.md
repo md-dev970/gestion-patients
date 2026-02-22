@@ -368,7 +368,11 @@ through the gateway without changing the downstream endpoints.
 
 ---
 
-## 11. Tests
+## 11. Tests (T1.10)
+
+Unit and integration tests for **JWT**, **RBAC**, **rate limit**, **bruteforce**, and **validation**; all tests passants. Run with `mvn test` in `gateway-service`.
+
+**Unit tests**: JWT (verification HS256/RS256), RBAC (policy + filter), rate limit (store + filter), anti-bruteforce by IP (store + filter), input validation (patterns + filter), authentication filter, audit senders. **Integration**: Gateway context + routes (GatewayRoutesConfigTest).
 
 Main test classes:
 
@@ -391,16 +395,22 @@ Main test classes:
    - Injection patterns: known SQLi (e.g. `OR 1=1`, `UNION SELECT`) → match SQLI; known XSS (e.g. `<script>`, `javascript:`) → match XSS; safe input → no match.
    - Input validation filter: excluded path → chain called; suspicious query param → 400, JSON body, `SecurityAuditSender.sendSuspiciousInput` invoked with source=query, category=SQLI or XSS; suspicious header → 400, audit with source=header; safe input → chain called; disabled → chain called even with suspicious input.
 
-5. **JwtVerificationServiceTest**
-   - Valid token (same secret as auth-service) → claims returned (username, roles, userId, staffId).
-   - Expired, malformed, or wrong-secret token → `Optional.empty()`.
-   - Null or blank token → `Optional.empty()`.
+5. **JwtVerificationServiceTest** / **JwtVerificationServiceRs256Test**
+   - HS256: valid token → claims; expired/malformed/wrong secret → empty; null/blank → empty.
+   - RS256: valid token with public key → claims; token signed with other key → empty.
 
-6. **GatewayRoutesConfigTest**
+6. **BruteforceByIpStoreTest** / **BruteforceByIpFilterTest**
+   - Store: under N failures → not blocked; N failures → blocked; different IPs independent.
+   - Filter: non-login path → chain called; POST login 401 → recordFailure, audit on Nth; IP blocked → 423 without chain.
+
+7. **GatewayRoutesConfigTest** (integration)
    - Spring Boot test that starts the gateway context and autowires the `RouteLocator`.
    - Verifies that the gateway defines routes for **all** core KIT COMMUN services:
      `auth-service`, `patient-service`, `staff-service`,
      `appointment-service`, `medical-record-service`, `consultations-service`.
+
+8. **NoOpSecurityAuditSenderTest** / **HttpSecurityAuditSenderTest**
+   - No-op: methods do not throw. HTTP: POST payload shape and URL for audit/IDS events.
 
 These tests ensure that:
 
