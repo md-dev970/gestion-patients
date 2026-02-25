@@ -1,5 +1,6 @@
 package com.hospital.patient.controller;
 
+import com.hospital.patient.audit.SecurityAuditSender;
 import com.hospital.patient.dto.PatientCreateRequest;
 import com.hospital.patient.dto.PatientDTO;
 import com.hospital.patient.dto.PatientDossierDTO;
@@ -39,6 +40,7 @@ import java.util.List;
 public class PatientController {
 
     private final PatientService patientService;
+    private final SecurityAuditSender securityAuditSender;
 
     // ═══════════════════════════════════════════════════════════════════════════
     // CREATE OPERATIONS
@@ -107,6 +109,7 @@ public class PatientController {
     public ResponseEntity<PatientDossierDTO> getPatientDossier(@PathVariable Long id) {
         log.info("REST request to get full dossier for patient: {}", id);
         PatientDossierDTO dossier = patientService.getPatientDossier(id);
+        securityAuditSender.sendDossierAccessed(String.valueOf(id), "READ");
         return ResponseEntity.ok(dossier);
     }
 
@@ -121,6 +124,7 @@ public class PatientController {
     public ResponseEntity<PatientDossierDTO> exportPatientDossier(@PathVariable Long id) {
         log.info("T6.6: REST request to export full dossier for patient: {}", id);
         PatientDossierDTO dossier = patientService.getPatientDossier(id);
+        securityAuditSender.sendDossierAccessed(String.valueOf(id), "EXPORT");
 
         String filename = "patient-" + id + "-dossier.json";
         return ResponseEntity.ok()

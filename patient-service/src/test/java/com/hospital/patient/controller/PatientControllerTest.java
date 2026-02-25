@@ -5,6 +5,7 @@ import com.hospital.patient.dto.AppointmentSummaryDTO;
 import com.hospital.patient.dto.ConsultationSummaryDTO;
 import com.hospital.patient.dto.MedicalRecordSummaryDTO;
 import com.hospital.patient.dto.PatientDTO;
+import com.hospital.patient.audit.SecurityAuditSender;
 import com.hospital.patient.dto.PatientDossierDTO;
 import com.hospital.patient.exception.PatientNotFoundException;
 import com.hospital.patient.service.PatientService;
@@ -21,8 +22,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -40,6 +44,9 @@ class PatientControllerTest {
 
     @MockBean
     private PatientService patientService;
+
+    @MockBean
+    private SecurityAuditSender securityAuditSender;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -89,10 +96,12 @@ class PatientControllerTest {
                 .andExpect(jsonPath("$.medicalRecord.patientId").value(1))
                 .andExpect(jsonPath("$.consultations[0].patientId").value(1))
                 .andExpect(jsonPath("$.appointments[0].patientId").value(1));
+
+        verify(securityAuditSender).sendDossierAccessed("1", "READ");
     }
 
     @Test
-    @DisplayName("GET /api/patients/{id}/dossier - patient not found - returns 404")
+    @DisplayName("GET /api/patients/{id}/dossier - patient not found - returns 404, no DOSSIER_ACCESSED (T6.8)")
     void getPatientDossier_patientNotFound_returns404() throws Exception {
         when(patientService.getPatientDossier(anyLong()))
                 .thenThrow(new PatientNotFoundException("Patient not found with ID: 1"));
@@ -100,6 +109,8 @@ class PatientControllerTest {
         mockMvc.perform(get("/api/patients/1/dossier")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
+
+        verify(securityAuditSender, never()).sendDossierAccessed(any(), any());
     }
 
     @Test
@@ -132,6 +143,8 @@ class PatientControllerTest {
                 .andExpect(header().string("Content-Disposition",
                         "attachment; filename=\"patient-1-dossier.json\""))
                 .andExpect(jsonPath("$.patient.id").value(1));
+
+        verify(securityAuditSender).sendDossierAccessed("1", "EXPORT");
     }
 
     @Test
@@ -150,10 +163,12 @@ class PatientControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(header().string("Content-Type", org.hamcrest.Matchers.containsString("application/json")));
+
+        verify(securityAuditSender).sendDossierAccessed("1", "EXPORT");
     }
 
     @Test
-    @DisplayName("GET /api/patients/{id}/dossier/export - patient not found - returns 404")
+    @DisplayName("GET /api/patients/{id}/dossier/export - patient not found - returns 404, no DOSSIER_ACCESSED (T6.8)")
     void exportPatientDossier_patientNotFound_returns404() throws Exception {
         when(patientService.getPatientDossier(anyLong()))
                 .thenThrow(new PatientNotFoundException("Patient not found with ID: 1"));
@@ -161,6 +176,8 @@ class PatientControllerTest {
         mockMvc.perform(get("/api/patients/1/dossier/export")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
+
+        verify(securityAuditSender, never()).sendDossierAccessed(any(), any());
     }
 
     @Test

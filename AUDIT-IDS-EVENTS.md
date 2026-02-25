@@ -42,6 +42,38 @@ Implementations are fire-and-forget; failures to send are logged and do not affe
 
 ---
 
+## DOSSIER_ACCESSED (T6.8)
+
+Emitted by **patient-service** when a patient dossier is successfully **read** (GET `/api/patients/{id}/dossier`) or **exported** (GET `/api/patients/{id}/dossier/export`). No PII/PHI is included in the payload; used for audit trail of access to PHI.
+
+| Field          | Type   | Description |
+|----------------|--------|-------------|
+| `eventType`    | string | Always `"DOSSIER_ACCESSED"` |
+| `timestamp`   | string | ISO-8601 instant |
+| `resourceType`| string | Always `"PATIENT_DOSSIER"` |
+| `resourceId`  | string | Patient ID (no PII). |
+| `action`       | string | `"READ"` for dossier view, `"EXPORT"` for dossier download |
+
+**Example payload (read):**
+
+```json
+{
+  "eventType": "DOSSIER_ACCESSED",
+  "timestamp": "2025-02-17T10:35:00.000Z",
+  "resourceType": "PATIENT_DOSSIER",
+  "resourceId": "42",
+  "action": "READ"
+}
+```
+
+**When it is sent:**
+
+- **patient-service:** After a successful response for GET `/api/patients/{id}/dossier` (action READ) or GET `/api/patients/{id}/dossier/export` (action EXPORT). Not sent when the patient is not found (404).
+
+Implementations are fire-and-forget; failures to send are logged and do not affect the HTTP response.
+
+---
+
 ## Gateway-only events (reference)
 
 These are sent by the gateway when `security.audit.url` is set.
