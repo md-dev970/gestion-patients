@@ -148,6 +148,46 @@ class RbacAuthorizationFilterTest {
     }
 
     @Test
+    @DisplayName("GET /api/patients/{id}/dossier with ROLE_DOCTOR - allowed, chain called (T6.4)")
+    void filter_dossierGet_doctor_allowed() {
+        ServerWebExchange exchange = exchange("/api/patients/1/dossier", "GET", "doctor1", "10", "ROLE_DOCTOR");
+        when(rbacService.resolveResource("/api/patients/1/dossier")).thenReturn(java.util.Optional.of(Resource.PATIENTS));
+        when(rbacService.isAllowed("/api/patients/1/dossier", "GET", List.of("ROLE_DOCTOR"))).thenReturn(true);
+        when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
+
+        StepVerifier.create(filter.filter(exchange, filterChain)).verifyComplete();
+
+        verify(filterChain).filter(exchange);
+        assertThat(exchange.getResponse().getStatusCode()).isNull();
+        verify(securityAuditSender, never()).sendAccessDenied(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("GET /api/patients/{id}/dossier with ROLE_PATIENT - 403 and audit (T6.4)")
+    void filter_dossierGet_patient_denied() {
+        ServerWebExchange exchange = exchange("/api/patients/42/dossier", "GET", "patient1", "99", "ROLE_PATIENT");
+        when(rbacService.resolveResource("/api/patients/42/dossier")).thenReturn(java.util.Optional.of(Resource.PATIENTS));
+        when(rbacService.isAllowed("/api/patients/42/dossier", "GET", List.of("ROLE_PATIENT"))).thenReturn(false);
+        when(rbacService.resolveAction("GET")).thenReturn(Action.READ);
+        when(rbacService.extractResourceId("/api/patients/42/dossier", Resource.PATIENTS)).thenReturn("42");
+
+        StepVerifier.create(filter.filter(exchange, filterChain)).verifyComplete();
+
+        verify(filterChain, never()).filter(any());
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        ArgumentCaptor<String> resourceIdCaptor = ArgumentCaptor.forClass(String.class);
+        verify(securityAuditSender).sendAccessDenied(
+                eq("99"),
+                eq(Resource.PATIENTS),
+                resourceIdCaptor.capture(),
+                eq(Action.READ),
+                eq("RBAC_DENY")
+        );
+        assertThat(resourceIdCaptor.getValue()).isEqualTo("42");
+    }
+
+    @Test
     @DisplayName("getOrder returns -50")
     void getOrder_returns50() {
         assertThat(filter.getOrder()).isEqualTo(-50);

@@ -35,6 +35,7 @@ public final class RbacPolicy {
 
     private static Set<String> allowedForPatients(Action action) {
         return switch (action) {
+            // T6.4: GET /api/patients/{id}/dossier — DOCTOR/MEDECIN allowed, ROLE_PATIENT denied
             case READ -> Set.of(ADMIN, MEDECIN, DOCTOR, INFIRMIER, NURSE, RECEPTIONIST, LAB_TECH);
             case CREATE -> Set.of(ADMIN, MEDECIN, DOCTOR, NURSE, RECEPTIONIST);
             case UPDATE -> Set.of(ADMIN, MEDECIN, DOCTOR, NURSE);
