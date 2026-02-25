@@ -46,6 +46,11 @@ management:
       exposure:
         include: health,info,metrics
 
+# Optional: set to audit log endpoint to send PHI_DELETED events (T6.3)
+# security:
+#   audit:
+#     url: http://localhost:9200/audit
+
 logging:
   level:
     root: INFO

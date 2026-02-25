@@ -8,6 +8,7 @@ import com.hospital.consultation.mapper.ConsultationMapper;
 import com.hospital.consultation.model.Consultation;
 import com.hospital.consultation.model.ConsultationStatus;
 import com.hospital.consultation.model.ConsultationType;
+import com.hospital.consultation.audit.SecurityAuditSender;
 import com.hospital.consultation.repository.ConsultationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -372,23 +373,25 @@ class ConsultationServiceImplTest {
     }
 
     @Test
-    @DisplayName("deleteByPatientId - calls repository deleteByPatientId")
-    void deleteByPatientId_callsRepository() {
+    @DisplayName("deleteByPatientId - consultations deleted - sends PHI_DELETED")
+    void deleteByPatientId_deleted_sendsPhiDeleted() {
         when(consultationRepository.deleteByPatientId(100L)).thenReturn(3);
 
         consultationService.deleteByPatientId(100L);
 
         verify(consultationRepository).deleteByPatientId(100L);
+        verify(securityAuditSender).sendPhiDeleted("CONSULTATION", "100");
     }
 
     @Test
-    @DisplayName("deleteByPatientId - no consultations - idempotent, no exception")
-    void deleteByPatientId_noConsultations_idempotent() {
+    @DisplayName("deleteByPatientId - no consultations - idempotent, does not send PHI_DELETED")
+    void deleteByPatientId_noConsultations_idempotentNoAudit() {
         when(consultationRepository.deleteByPatientId(100L)).thenReturn(0);
 
         consultationService.deleteByPatientId(100L);
 
         verify(consultationRepository).deleteByPatientId(100L);
+        verify(securityAuditSender, never()).sendPhiDeleted(any(), any());
     }
 }
 

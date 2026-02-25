@@ -10,6 +10,7 @@ import com.hospital.appointment.mapper.AppointmentMapper;
 import com.hospital.appointment.model.Appointment;
 import com.hospital.appointment.model.AppointmentStatus;
 import com.hospital.appointment.model.AppointmentType;
+import com.hospital.appointment.audit.SecurityAuditSender;
 import com.hospital.appointment.repository.AppointmentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +48,9 @@ class AppointmentServiceImplTest {
 
     @Mock
     private StaffClient staffClient;
+
+    @Mock
+    private SecurityAuditSender securityAuditSender;
 
     @InjectMocks
     private AppointmentServiceImpl appointmentService;
@@ -425,23 +429,25 @@ class AppointmentServiceImplTest {
     }
 
     @Test
-    @DisplayName("deleteByPatientId - calls repository deleteByPatientId")
-    void deleteByPatientId_callsRepository() {
+    @DisplayName("deleteByPatientId - appointments deleted - sends PHI_DELETED")
+    void deleteByPatientId_deleted_sendsPhiDeleted() {
         when(appointmentRepository.deleteByPatientId(100L)).thenReturn(2);
 
         appointmentService.deleteByPatientId(100L);
 
         verify(appointmentRepository).deleteByPatientId(100L);
+        verify(securityAuditSender).sendPhiDeleted("APPOINTMENT", "100");
     }
 
     @Test
-    @DisplayName("deleteByPatientId - no appointments - idempotent, no exception")
-    void deleteByPatientId_noAppointments_idempotent() {
+    @DisplayName("deleteByPatientId - no appointments - idempotent, does not send PHI_DELETED")
+    void deleteByPatientId_noAppointments_idempotentNoAudit() {
         when(appointmentRepository.deleteByPatientId(100L)).thenReturn(0);
 
         appointmentService.deleteByPatientId(100L);
 
         verify(appointmentRepository).deleteByPatientId(100L);
+        verify(securityAuditSender, never()).sendPhiDeleted(any(), any());
     }
 }
 

@@ -1,3 +1,4 @@
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\audit\SecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\exception\AppointmentNotFoundException.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\client\PatientClientFallback.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\repository\AppointmentRepository.java
@@ -11,8 +12,10 @@ D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-serv
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\controller\AppointmentController.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\AppointmentServiceApplication.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\config\OpenApiConfig.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\audit\HttpSecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\client\PatientClient.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\exception\InvalidAppointmentException.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\model\Appointment.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\dto\AppointmentCreateRequest.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\client\StaffClientFallback.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\appointment-service\src\main\java\com\hospital\appointment\audit\NoOpSecurityAuditSender.java

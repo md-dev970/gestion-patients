@@ -1,0 +1,3 @@
+com\hospital\medicalrecord\audit\NoOpSecurityAuditSender.class
+com\hospital\medicalrecord\audit\HttpSecurityAuditSender.class
+com\hospital\medicalrecord\audit\SecurityAuditSender.class

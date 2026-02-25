@@ -8,6 +8,7 @@ import com.hospital.medicalrecord.mapper.MedicalRecordMapper;
 import com.hospital.medicalrecord.model.EntryType;
 import com.hospital.medicalrecord.model.MedicalEntry;
 import com.hospital.medicalrecord.model.MedicalRecord;
+import com.hospital.medicalrecord.audit.SecurityAuditSender;
 import com.hospital.medicalrecord.repository.MedicalEntryRepository;
 import com.hospital.medicalrecord.repository.MedicalRecordRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +42,9 @@ class MedicalRecordServiceImplTest {
 
     @Mock
     private MedicalEntryMapper entryMapper;
+
+    @Mock
+    private SecurityAuditSender securityAuditSender;
 
     @InjectMocks
     private MedicalRecordServiceImpl medicalRecordService;
@@ -304,8 +308,8 @@ class MedicalRecordServiceImplTest {
     }
 
     @Test
-    @DisplayName("deleteByPatientId - record exists - deletes record")
-    void deleteByPatientId_recordExists_deletesRecord() {
+    @DisplayName("deleteByPatientId - record exists - deletes record and sends PHI_DELETED")
+    void deleteByPatientId_recordExists_deletesRecordAndSendsPhiDeleted() {
         when(recordRepository.findByPatientId(100L)).thenReturn(Optional.of(medicalRecord));
         doNothing().when(recordRepository).delete(medicalRecord);
 
@@ -313,17 +317,19 @@ class MedicalRecordServiceImplTest {
 
         verify(recordRepository).findByPatientId(100L);
         verify(recordRepository).delete(medicalRecord);
+        verify(securityAuditSender).sendPhiDeleted("MEDICAL_RECORD", "100");
     }
 
     @Test
-    @DisplayName("deleteByPatientId - no record - does nothing")
-    void deleteByPatientId_noRecord_doesNothing() {
+    @DisplayName("deleteByPatientId - no record - does nothing and does not send PHI_DELETED")
+    void deleteByPatientId_noRecord_doesNothingAndNoAudit() {
         when(recordRepository.findByPatientId(100L)).thenReturn(Optional.empty());
 
         medicalRecordService.deleteByPatientId(100L);
 
         verify(recordRepository).findByPatientId(100L);
         verify(recordRepository, never()).delete(any());
+        verify(securityAuditSender, never()).sendPhiDeleted(any(), any());
     }
 }
 

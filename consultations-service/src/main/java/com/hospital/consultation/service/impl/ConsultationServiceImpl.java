@@ -7,6 +7,7 @@ import com.hospital.consultation.exception.ConsultationNotFoundException;
 import com.hospital.consultation.mapper.ConsultationMapper;
 import com.hospital.consultation.model.Consultation;
 import com.hospital.consultation.model.ConsultationStatus;
+import com.hospital.consultation.audit.SecurityAuditSender;
 import com.hospital.consultation.repository.ConsultationRepository;
 import com.hospital.consultation.service.ConsultationService;
 import lombok.RequiredArgsConstructor;
@@ -135,6 +136,9 @@ public class ConsultationServiceImpl implements ConsultationService {
     @Override
     public void deleteByPatientId(Long patientId) {
         log.info("Deleting all consultations for patient: {}", patientId);
-        consultationRepository.deleteByPatientId(patientId);
+        int deleted = consultationRepository.deleteByPatientId(patientId);
+        if (deleted > 0) {
+            securityAuditSender.sendPhiDeleted("CONSULTATION", String.valueOf(patientId));
+        }
     }
 }

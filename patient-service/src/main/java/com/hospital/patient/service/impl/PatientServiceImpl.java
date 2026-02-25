@@ -13,6 +13,7 @@ import com.hospital.patient.exception.DuplicatePatientException;
 import com.hospital.patient.exception.PatientNotFoundException;
 import com.hospital.patient.mapper.PatientMapper;
 import com.hospital.patient.model.Patient;
+import com.hospital.patient.audit.SecurityAuditSender;
 import com.hospital.patient.repository.PatientRepository;
 import com.hospital.patient.service.PatientService;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,7 @@ public class PatientServiceImpl implements PatientService {
     private final MedicalRecordClient medicalRecordClient;
     private final ConsultationClient consultationClient;
     private final AppointmentClient appointmentClient;
+    private final SecurityAuditSender securityAuditSender;
 
     @Override
     public PatientDTO createPatient(PatientCreateRequest request) {
@@ -148,6 +150,7 @@ public class PatientServiceImpl implements PatientService {
         // TODO: Consider soft delete instead of hard delete
         // Business logic will be added in the specialized subject
         patientRepository.deleteById(id);
+        securityAuditSender.sendPhiDeleted("PATIENT", String.valueOf(id));
         log.info("Patient deleted successfully: {}", id);
     }
 

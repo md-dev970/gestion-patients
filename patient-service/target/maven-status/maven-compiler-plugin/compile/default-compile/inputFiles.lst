@@ -7,8 +7,10 @@ D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\mapper\PatientMapper.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\client\AppointmentClientFallback.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\dto\PatientDossierDTO.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\audit\HttpSecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\model\Gender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\client\ConsultationClient.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\audit\NoOpSecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\exception\PatientNotFoundException.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\PatientServiceApplication.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\dto\ConsultationSummaryDTO.java
@@ -17,6 +19,7 @@ D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\service\PatientService.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\client\MedicalRecordClientFallback.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\dto\AppointmentSummaryDTO.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\audit\SecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\client\AppointmentClient.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\dto\PatientDTO.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\dto\MedicalRecordSummaryDTO.java

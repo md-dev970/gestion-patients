@@ -13,6 +13,7 @@ import com.hospital.patient.exception.DuplicatePatientException;
 import com.hospital.patient.exception.PatientNotFoundException;
 import com.hospital.patient.mapper.PatientMapper;
 import com.hospital.patient.model.Patient;
+import com.hospital.patient.audit.SecurityAuditSender;
 import com.hospital.patient.repository.PatientRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,6 +52,9 @@ class PatientServiceImplTest {
 
     @Mock
     private AppointmentClient appointmentClient;
+
+    @Mock
+    private SecurityAuditSender securityAuditSender;
 
     @InjectMocks
     private PatientServiceImpl patientService;
@@ -300,8 +305,8 @@ class PatientServiceImplTest {
     }
 
     @Test
-    @DisplayName("deletePatient - patient found - deletes patient")
-    void deletePatient_patientFound_deletesPatient() {
+    @DisplayName("deletePatient - patient found - deletes patient and sends PHI_DELETED")
+    void deletePatient_patientFound_deletesPatientAndSendsPhiDeleted() {
         // Given
         when(patientRepository.existsById(1L)).thenReturn(true);
         doNothing().when(medicalRecordClient).deleteMedicalRecordsByPatientId(1L);
@@ -318,10 +323,11 @@ class PatientServiceImplTest {
         verify(consultationClient).deleteConsultationsByPatientId(1L);
         verify(appointmentClient).deleteAppointmentsByPatientId(1L);
         verify(patientRepository).deleteById(1L);
+        verify(securityAuditSender).sendPhiDeleted("PATIENT", "1");
     }
 
     @Test
-    @DisplayName("deletePatient - patient not found - throws PatientNotFoundException")
+    @DisplayName("deletePatient - patient not found - throws PatientNotFoundException, no PHI_DELETED")
     void deletePatient_patientNotFound_throwsPatientNotFoundException() {
         // Given
         when(patientRepository.existsById(1L)).thenReturn(false);
@@ -335,6 +341,7 @@ class PatientServiceImplTest {
         verify(consultationClient, never()).deleteConsultationsByPatientId(anyLong());
         verify(appointmentClient, never()).deleteAppointmentsByPatientId(anyLong());
         verify(patientRepository, never()).deleteById(any());
+        verify(securityAuditSender, never()).sendPhiDeleted(any(), any());
     }
 
     @Test

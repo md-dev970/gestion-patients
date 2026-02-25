@@ -9,6 +9,7 @@ import com.hospital.appointment.exception.InvalidAppointmentException;
 import com.hospital.appointment.mapper.AppointmentMapper;
 import com.hospital.appointment.model.Appointment;
 import com.hospital.appointment.model.AppointmentStatus;
+import com.hospital.appointment.audit.SecurityAuditSender;
 import com.hospital.appointment.repository.AppointmentRepository;
 import com.hospital.appointment.service.AppointmentService;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final AppointmentMapper appointmentMapper;
     private final PatientClient patientClient;
     private final StaffClient staffClient;
+    private final SecurityAuditSender securityAuditSender;
 
     @Override
     public AppointmentDTO createAppointment(AppointmentCreateRequest request) {
@@ -159,7 +161,10 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     public void deleteByPatientId(Long patientId) {
         log.info("Deleting all appointments for patient: {}", patientId);
-        appointmentRepository.deleteByPatientId(patientId);
+        int deleted = appointmentRepository.deleteByPatientId(patientId);
+        if (deleted > 0) {
+            securityAuditSender.sendPhiDeleted("APPOINTMENT", String.valueOf(patientId));
+        }
     }
 
     @Override

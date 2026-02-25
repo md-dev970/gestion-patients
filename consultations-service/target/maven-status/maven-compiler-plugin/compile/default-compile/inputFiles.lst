@@ -4,11 +4,14 @@ D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-se
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\repository\ConsultationRepository.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\service\impl\ConsultationServiceImpl.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\config\OpenApiConfig.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\audit\HttpSecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\ConsultationsServiceApplication.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\dto\ConsultationDTO.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\model\ConsultationType.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\model\ConsultationStatus.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\audit\SecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\model\Consultation.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\audit\NoOpSecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\mapper\ConsultationMapper.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\exception\GlobalExceptionHandler.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\consultations-service\src\main\java\com\hospital\consultation\dto\ConsultationCreateRequest.java

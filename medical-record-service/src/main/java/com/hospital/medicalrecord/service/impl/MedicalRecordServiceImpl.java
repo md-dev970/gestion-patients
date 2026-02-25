@@ -7,6 +7,7 @@ import com.hospital.medicalrecord.mapper.MedicalEntryMapper;
 import com.hospital.medicalrecord.mapper.MedicalRecordMapper;
 import com.hospital.medicalrecord.model.MedicalEntry;
 import com.hospital.medicalrecord.model.MedicalRecord;
+import com.hospital.medicalrecord.audit.SecurityAuditSender;
 import com.hospital.medicalrecord.repository.MedicalEntryRepository;
 import com.hospital.medicalrecord.repository.MedicalRecordRepository;
 import com.hospital.medicalrecord.service.MedicalRecordService;
@@ -39,6 +40,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     private final MedicalEntryRepository entryRepository;
     private final MedicalRecordMapper recordMapper;
     private final MedicalEntryMapper entryMapper;
+    private final SecurityAuditSender securityAuditSender;
 
     @Override
     public MedicalRecordDTO createMedicalRecord(Long patientId) {
@@ -127,8 +129,15 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     @Override
     public void deleteByPatientId(Long patientId) {
         log.info("Deleting medical record for patient: {}", patientId);
-        recordRepository.findByPatientId(patientId)
-                .ifPresent(recordRepository::delete);
+        boolean deleted = recordRepository.findByPatientId(patientId)
+                .map(record -> {
+                    recordRepository.delete(record);
+                    return true;
+                })
+                .orElse(false);
+        if (deleted) {
+            securityAuditSender.sendPhiDeleted("MEDICAL_RECORD", String.valueOf(patientId));
+        }
     }
 }
 
