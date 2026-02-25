@@ -26,6 +26,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -96,6 +97,48 @@ class PatientControllerTest {
                 .thenThrow(new PatientNotFoundException("Patient not found with ID: 1"));
 
         mockMvc.perform(get("/api/patients/1/dossier")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /api/patients/{id}/dossier/export - patient found - returns attachment with dossier JSON")
+    void exportPatientDossier_patientFound_returnsAttachment() throws Exception {
+        PatientDTO patient = PatientDTO.builder()
+                .id(1L)
+                .firstName("John")
+                .lastName("Doe")
+                .build();
+
+        MedicalRecordSummaryDTO record = MedicalRecordSummaryDTO.builder()
+                .id(10L)
+                .patientId(1L)
+                .build();
+
+        PatientDossierDTO dossier = PatientDossierDTO.builder()
+                .patient(patient)
+                .medicalRecord(record)
+                .consultations(List.of())
+                .appointments(List.of())
+                .build();
+
+        when(patientService.getPatientDossier(1L)).thenReturn(dossier);
+
+        mockMvc.perform(get("/api/patients/1/dossier/export")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        "attachment; filename=\"patient-1-dossier.json\""))
+                .andExpect(jsonPath("$.patient.id").value(1));
+    }
+
+    @Test
+    @DisplayName("GET /api/patients/{id}/dossier/export - patient not found - returns 404")
+    void exportPatientDossier_patientNotFound_returns404() throws Exception {
+        when(patientService.getPatientDossier(anyLong()))
+                .thenThrow(new PatientNotFoundException("Patient not found with ID: 1"));
+
+        mockMvc.perform(get("/api/patients/1/dossier/export")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
