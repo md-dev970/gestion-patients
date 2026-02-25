@@ -165,4 +165,19 @@ public class ConsultationController {
         consultationService.deleteConsultation(id);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * Deletes all consultations for a patient. Idempotent. T6.1: RBAC ADMIN at gateway.
+     */
+    @DeleteMapping("/patient/{patientId}")
+    @Operation(summary = "Supprimer les consultations d'un patient", description = "Supprime toutes les consultations du patient (effacement en cascade)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Suppression effectuée")
+    })
+    public ResponseEntity<Void> deleteByPatientId(
+            @Parameter(description = "ID du patient") @PathVariable Long patientId) {
+        log.info("REST request to delete all consultations for patient: {}", patientId);
+        consultationService.deleteByPatientId(patientId);
+        return ResponseEntity.noContent().build();
+    }
 }

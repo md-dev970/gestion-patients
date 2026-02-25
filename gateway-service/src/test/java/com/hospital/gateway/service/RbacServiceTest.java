@@ -25,7 +25,6 @@ class RbacServiceTest {
     void isAllowed_pathOutsideScope_returnsTrue() {
         assertThat(rbacService.isAllowed("/api/auth/login", "POST", List.of())).isTrue();
         assertThat(rbacService.isAllowed("/api/staff/1", "GET", List.of())).isTrue();
-        assertThat(rbacService.isAllowed("/api/appointments", "GET", List.of())).isTrue();
     }
 
     @Test
@@ -87,10 +86,29 @@ class RbacServiceTest {
     }
 
     @Test
+    @DisplayName("resolveResource returns APPOINTMENTS for /api/appointments path")
+    void resolveResource_appointmentsPrefix_returnsAPPOINTMENTS() {
+        assertThat(rbacService.resolveResource("/api/appointments")).contains(Resource.APPOINTMENTS);
+        assertThat(rbacService.resolveResource("/api/appointments/patient/1")).contains(Resource.APPOINTMENTS);
+    }
+
+    @Test
     @DisplayName("resolveResource returns empty for non-patient-dossier path")
     void resolveResource_otherPath_returnsEmpty() {
         assertThat(rbacService.resolveResource("/api/auth/login")).isEmpty();
         assertThat(rbacService.resolveResource(null)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("DELETE /api/appointments/patient/{id} with ROLE_ADMIN is allowed (T6.1)")
+    void isAllowed_appointmentsDeleteByPatient_admin_allowed() {
+        assertThat(rbacService.isAllowed("/api/appointments/patient/1", "DELETE", List.of("ROLE_ADMIN"))).isTrue();
+    }
+
+    @Test
+    @DisplayName("DELETE /api/appointments/patient/{id} with ROLE_NURSE is denied (T6.1)")
+    void isAllowed_appointmentsDeleteByPatient_nurse_denied() {
+        assertThat(rbacService.isAllowed("/api/appointments/patient/1", "DELETE", List.of("ROLE_NURSE"))).isFalse();
     }
 
     @Test
@@ -108,6 +126,7 @@ class RbacServiceTest {
     void extractResourceId_extractsId() {
         assertThat(rbacService.extractResourceId("/api/patients/123", Resource.PATIENTS)).isEqualTo("123");
         assertThat(rbacService.extractResourceId("/api/medical-records/456", Resource.MEDICAL_RECORDS)).isEqualTo("456");
+        assertThat(rbacService.extractResourceId("/api/appointments/789", Resource.APPOINTMENTS)).isEqualTo("789");
         assertThat(rbacService.extractResourceId("/api/patients", Resource.PATIENTS)).isNull();
         assertThat(rbacService.extractResourceId("/api/patients/search", Resource.PATIENTS)).isNull();
     }

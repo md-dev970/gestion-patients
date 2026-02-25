@@ -69,5 +69,10 @@ public interface AppointmentService {
      * // Business logic will be added in the specialized subject
      */
     boolean isTimeSlotAvailable(Long doctorId, java.time.LocalDateTime dateTime);
+
+    /**
+     * Deletes all appointments for a patient. Idempotent. T6.1: RBAC ADMIN at gateway.
+     */
+    void deleteByPatientId(Long patientId);
 }
 

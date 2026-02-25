@@ -3,6 +3,7 @@ package com.hospital.appointment.repository;
 import com.hospital.appointment.model.Appointment;
 import com.hospital.appointment.model.AppointmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -79,5 +80,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findUpcomingAppointments(
             @Param("patientId") Long patientId,
             @Param("now") LocalDateTime now);
+
+    /**
+     * Deletes all appointments for a patient. T6.1: cascade erasure.
+     */
+    @Modifying
+    @Query("DELETE FROM Appointment a WHERE a.patientId = :patientId")
+    int deleteByPatientId(@Param("patientId") Long patientId);
 }
 

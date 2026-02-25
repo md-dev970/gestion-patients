@@ -423,6 +423,26 @@ class AppointmentServiceImplTest {
         assertThat(result).isFalse();
         verify(appointmentRepository).findConflictingAppointments(2L, appointmentDateTime);
     }
+
+    @Test
+    @DisplayName("deleteByPatientId - calls repository deleteByPatientId")
+    void deleteByPatientId_callsRepository() {
+        when(appointmentRepository.deleteByPatientId(100L)).thenReturn(2);
+
+        appointmentService.deleteByPatientId(100L);
+
+        verify(appointmentRepository).deleteByPatientId(100L);
+    }
+
+    @Test
+    @DisplayName("deleteByPatientId - no appointments - idempotent, no exception")
+    void deleteByPatientId_noAppointments_idempotent() {
+        when(appointmentRepository.deleteByPatientId(100L)).thenReturn(0);
+
+        appointmentService.deleteByPatientId(100L);
+
+        verify(appointmentRepository).deleteByPatientId(100L);
+    }
 }
 
 

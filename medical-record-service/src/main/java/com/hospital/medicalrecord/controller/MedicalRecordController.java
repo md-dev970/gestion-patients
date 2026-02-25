@@ -105,5 +105,16 @@ public class MedicalRecordController {
         MedicalRecordDTO record = medicalRecordService.getOrCreateMedicalRecord(patientId);
         return ResponseEntity.ok(record);
     }
+
+    /**
+     * Deletes the medical record (and all entries) for a patient. Idempotent.
+     * T6.1: Protected by gateway RBAC (ADMIN only).
+     */
+    @DeleteMapping("/patient/{patientId}")
+    public ResponseEntity<Void> deleteByPatientId(@PathVariable Long patientId) {
+        log.info("REST request to delete medical record for patient: {}", patientId);
+        medicalRecordService.deleteByPatientId(patientId);
+        return ResponseEntity.noContent().build();
+    }
 }
 

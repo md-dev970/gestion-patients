@@ -133,5 +133,15 @@ public class AppointmentController {
         appointmentService.cancelAppointment(id);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * Deletes all appointments for a patient. Idempotent. T6.1: RBAC ADMIN at gateway.
+     */
+    @DeleteMapping("/patient/{patientId}")
+    public ResponseEntity<Void> deleteByPatientId(@PathVariable Long patientId) {
+        log.info("REST request to delete all appointments for patient: {}", patientId);
+        appointmentService.deleteByPatientId(patientId);
+        return ResponseEntity.noContent().build();
+    }
 }
 

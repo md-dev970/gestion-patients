@@ -370,5 +370,25 @@ class ConsultationServiceImplTest {
         verify(consultationRepository).existsById(consultationId);
         verify(consultationRepository, never()).deleteById(any());
     }
+
+    @Test
+    @DisplayName("deleteByPatientId - calls repository deleteByPatientId")
+    void deleteByPatientId_callsRepository() {
+        when(consultationRepository.deleteByPatientId(100L)).thenReturn(3);
+
+        consultationService.deleteByPatientId(100L);
+
+        verify(consultationRepository).deleteByPatientId(100L);
+    }
+
+    @Test
+    @DisplayName("deleteByPatientId - no consultations - idempotent, no exception")
+    void deleteByPatientId_noConsultations_idempotent() {
+        when(consultationRepository.deleteByPatientId(100L)).thenReturn(0);
+
+        consultationService.deleteByPatientId(100L);
+
+        verify(consultationRepository).deleteByPatientId(100L);
+    }
 }
 

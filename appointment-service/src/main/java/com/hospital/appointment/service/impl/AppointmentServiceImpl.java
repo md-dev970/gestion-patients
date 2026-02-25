@@ -157,6 +157,12 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override
+    public void deleteByPatientId(Long patientId) {
+        log.info("Deleting all appointments for patient: {}", patientId);
+        appointmentRepository.deleteByPatientId(patientId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public boolean isTimeSlotAvailable(Long doctorId, LocalDateTime dateTime) {
         // // Business logic will be added in the specialized subject

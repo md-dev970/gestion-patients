@@ -21,10 +21,11 @@ public class RbacService {
     private static final String PREFIX_PATIENTS = "/api/patients";
     private static final String PREFIX_MEDICAL_RECORDS = "/api/medical-records";
     private static final String PREFIX_CONSULTATIONS = "/api/consultations";
+    private static final String PREFIX_APPOINTMENTS = "/api/appointments";
 
     /**
      * Returns true if the request is allowed for at least one of the given roles.
-     * For paths not under /api/patients, /api/medical-records, or /api/consultations, returns true (no RBAC).
+     * For paths not under /api/patients, /api/medical-records, /api/consultations, or /api/appointments, returns true (no RBAC).
      */
     public boolean isAllowed(String path, String method, List<String> roles) {
         Optional<Resource> resource = resolveResource(path);
@@ -52,6 +53,7 @@ public class RbacService {
         if (path.startsWith(PREFIX_PATIENTS)) return Optional.of(Resource.PATIENTS);
         if (path.startsWith(PREFIX_MEDICAL_RECORDS)) return Optional.of(Resource.MEDICAL_RECORDS);
         if (path.startsWith(PREFIX_CONSULTATIONS)) return Optional.of(Resource.CONSULTATIONS);
+        if (path.startsWith(PREFIX_APPOINTMENTS)) return Optional.of(Resource.APPOINTMENTS);
         return Optional.empty();
     }
 
@@ -79,6 +81,7 @@ public class RbacService {
             case PATIENTS -> PREFIX_PATIENTS;
             case MEDICAL_RECORDS -> PREFIX_MEDICAL_RECORDS;
             case CONSULTATIONS -> PREFIX_CONSULTATIONS;
+            case APPOINTMENTS -> PREFIX_APPOINTMENTS;
         };
         String rest = path.length() > prefix.length() ? path.substring(prefix.length()) : "";
         if (!rest.startsWith("/")) return null;

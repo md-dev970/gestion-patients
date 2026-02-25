@@ -123,5 +123,12 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
                 .map(recordMapper::toDTO)
                 .orElseGet(() -> createMedicalRecord(patientId));
     }
+
+    @Override
+    public void deleteByPatientId(Long patientId) {
+        log.info("Deleting medical record for patient: {}", patientId);
+        recordRepository.findByPatientId(patientId)
+                .ifPresent(recordRepository::delete);
+    }
 }
 

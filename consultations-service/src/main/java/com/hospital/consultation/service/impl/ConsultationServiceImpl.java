@@ -131,4 +131,10 @@ public class ConsultationServiceImpl implements ConsultationService {
         consultationRepository.deleteById(consultationId);
         log.info("Consultation deleted successfully: {}", consultationId);
     }
+
+    @Override
+    public void deleteByPatientId(Long patientId) {
+        log.info("Deleting all consultations for patient: {}", patientId);
+        consultationRepository.deleteByPatientId(patientId);
+    }
 }

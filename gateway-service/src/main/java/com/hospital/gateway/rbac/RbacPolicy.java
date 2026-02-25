@@ -29,6 +29,7 @@ public final class RbacPolicy {
             case PATIENTS -> allowedForPatients(action);
             case MEDICAL_RECORDS -> allowedForMedicalRecords(action);
             case CONSULTATIONS -> allowedForConsultations(action);
+            case APPOINTMENTS -> allowedForAppointments(action);
         };
     }
 
@@ -56,6 +57,15 @@ public final class RbacPolicy {
             case CREATE -> Set.of(ADMIN, MEDECIN, DOCTOR, NURSE);
             case UPDATE -> Set.of(ADMIN, MEDECIN, DOCTOR, NURSE);
             case DELETE -> Set.of(ADMIN);
+        };
+    }
+
+    private static Set<String> allowedForAppointments(Action action) {
+        return switch (action) {
+            case READ -> Set.of(ADMIN, MEDECIN, DOCTOR, INFIRMIER, NURSE, RECEPTIONIST);
+            case CREATE -> Set.of(ADMIN, MEDECIN, DOCTOR, NURSE, RECEPTIONIST);
+            case UPDATE -> Set.of(ADMIN, MEDECIN, DOCTOR, NURSE, RECEPTIONIST);
+            case DELETE -> Set.of(ADMIN);  // T6.1: DELETE by patientId ADMIN only
         };
     }
 }

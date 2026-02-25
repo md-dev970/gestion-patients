@@ -3,6 +3,7 @@ package com.hospital.consultation.repository;
 import com.hospital.consultation.model.Consultation;
 import com.hospital.consultation.model.ConsultationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -63,4 +64,11 @@ public interface ConsultationRepository extends JpaRepository<Consultation, UUID
      * Vérifie s'il existe des consultations pour un patient.
      */
     boolean existsByPatientId(Long patientId);
+
+    /**
+     * Deletes all consultations for a patient. T6.1: cascade erasure.
+     */
+    @Modifying
+    @Query("DELETE FROM Consultation c WHERE c.patientId = :patientId")
+    int deleteByPatientId(@Param("patientId") Long patientId);
 }

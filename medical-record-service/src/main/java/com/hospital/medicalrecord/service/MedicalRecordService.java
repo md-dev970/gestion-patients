@@ -57,5 +57,11 @@ public interface MedicalRecordService {
      * Gets or creates a medical record for a patient.
      */
     MedicalRecordDTO getOrCreateMedicalRecord(Long patientId);
+
+    /**
+     * Deletes the medical record (and all entries) for a patient. Idempotent: 204 if no record.
+     * T6.1: For cascade erasure (RBAC: ADMIN only at gateway).
+     */
+    void deleteByPatientId(Long patientId);
 }
 

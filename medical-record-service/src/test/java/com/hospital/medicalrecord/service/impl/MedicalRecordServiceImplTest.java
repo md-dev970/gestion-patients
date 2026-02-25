@@ -302,5 +302,28 @@ class MedicalRecordServiceImplTest {
         verify(recordRepository).save(any(MedicalRecord.class));
         verify(recordMapper).toDTO(medicalRecord);
     }
+
+    @Test
+    @DisplayName("deleteByPatientId - record exists - deletes record")
+    void deleteByPatientId_recordExists_deletesRecord() {
+        when(recordRepository.findByPatientId(100L)).thenReturn(Optional.of(medicalRecord));
+        doNothing().when(recordRepository).delete(medicalRecord);
+
+        medicalRecordService.deleteByPatientId(100L);
+
+        verify(recordRepository).findByPatientId(100L);
+        verify(recordRepository).delete(medicalRecord);
+    }
+
+    @Test
+    @DisplayName("deleteByPatientId - no record - does nothing")
+    void deleteByPatientId_noRecord_doesNothing() {
+        when(recordRepository.findByPatientId(100L)).thenReturn(Optional.empty());
+
+        medicalRecordService.deleteByPatientId(100L);
+
+        verify(recordRepository).findByPatientId(100L);
+        verify(recordRepository, never()).delete(any());
+    }
 }
 

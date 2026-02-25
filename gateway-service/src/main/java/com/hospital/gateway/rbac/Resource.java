@@ -6,5 +6,6 @@ package com.hospital.gateway.rbac;
 public enum Resource {
     PATIENTS,
     MEDICAL_RECORDS,
-    CONSULTATIONS
+    CONSULTATIONS,
+    APPOINTMENTS
 }

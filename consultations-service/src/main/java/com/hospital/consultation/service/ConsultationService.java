@@ -55,4 +55,9 @@ public interface ConsultationService {
      * Supprime une consultation.
      */
     void deleteConsultation(UUID consultationId);
+
+    /**
+     * Deletes all consultations for a patient. Idempotent. T6.1: RBAC ADMIN at gateway.
+     */
+    void deleteByPatientId(Long patientId);
 }
