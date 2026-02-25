@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -111,17 +112,19 @@ public class PatientController {
 
     /**
      * T6.6: Exports the full GDPR dossier for a patient as a downloadable JSON file.
+     * T6.7: Response must have Content-Type: application/json.
      *
      * @param id The patient ID
-     * @return Aggregated dossier with Content-Disposition attachment header
+     * @return Aggregated dossier with Content-Disposition attachment and Content-Type application/json
      */
-    @GetMapping("/{id}/dossier/export")
+    @GetMapping(value = "/{id}/dossier/export", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<PatientDossierDTO> exportPatientDossier(@PathVariable Long id) {
         log.info("T6.6: REST request to export full dossier for patient: {}", id);
         PatientDossierDTO dossier = patientService.getPatientDossier(id);
 
         String filename = "patient-" + id + "-dossier.json";
         return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .body(dossier);
     }

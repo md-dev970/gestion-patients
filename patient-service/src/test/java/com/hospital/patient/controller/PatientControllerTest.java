@@ -148,7 +148,8 @@ class PatientControllerTest {
         mockMvc.perform(get("/api/patients/1/dossier/export")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(header().string("Content-Type", org.hamcrest.Matchers.containsString("application/json")));
     }
 
     @Test
