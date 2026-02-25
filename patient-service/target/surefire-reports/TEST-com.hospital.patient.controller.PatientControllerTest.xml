@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.hospital.patient.service.impl.PatientServiceImplTest" time="1.262" tests="18" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.hospital.patient.controller.PatientControllerTest" time="12.324" tests="4" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="17"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -66,76 +66,40 @@
     <property name="java.class.version" value="61.0"/>
     <property name="LOGGED_APPLICATION_NAME" value="[patient-service] "/>
   </properties>
-  <testcase name="searchPatients_noMatches_returnsEmptyList" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.946">
-    <system-out><![CDATA[2026-02-25T19:19:13.471Z DEBUG 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Searching patients with term: Smith
+  <testcase name="getPatientDossier_patientFound_returnsAggregatedDossier" classname="com.hospital.patient.controller.PatientControllerTest" time="0.909">
+    <system-out><![CDATA[19:19:00.857 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.hospital.patient.controller.PatientControllerTest]: PatientControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+19:19:01.166 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.hospital.patient.PatientServiceApplication for test class com.hospital.patient.controller.PatientControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.0)
+
+2026-02-25T19:19:04.256Z  INFO 21384 --- [patient-service] [           main] c.h.p.controller.PatientControllerTest   : Starting PatientControllerTest using Java 17.0.18 with PID 21384 (started by md in D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service)
+2026-02-25T19:19:04.259Z DEBUG 21384 --- [patient-service] [           main] c.h.p.controller.PatientControllerTest   : Running with Spring Boot v3.2.0, Spring v6.1.1
+2026-02-25T19:19:04.261Z  INFO 21384 --- [patient-service] [           main] c.h.p.controller.PatientControllerTest   : No active profile set, falling back to 1 default profile: "default"
+2026-02-25T19:19:11.492Z  INFO 21384 --- [patient-service] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-02-25T19:19:11.497Z  INFO 21384 --- [patient-service] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-02-25T19:19:11.505Z  INFO 21384 --- [patient-service] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 3 ms
+2026-02-25T19:19:11.651Z  INFO 21384 --- [patient-service] [           main] c.h.p.controller.PatientControllerTest   : Started PatientControllerTest in 10.226 seconds (process running for 12.655)
+2026-02-25T19:19:12.109Z  INFO 21384 --- [patient-service] [           main] c.h.p.controller.PatientController       : REST request to get full dossier for patient: 1
 ]]></system-out>
   </testcase>
-  <testcase name="getPatientById_patientNotFound_returnsEmptyOptional" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.016">
-    <system-out><![CDATA[2026-02-25T19:19:13.717Z DEBUG 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Fetching patient by ID: 1
+  <testcase name="deletePatient_patientFound_returns204" classname="com.hospital.patient.controller.PatientControllerTest" time="0.036">
+    <system-out><![CDATA[2026-02-25T19:19:12.605Z  INFO 21384 --- [patient-service] [           main] c.h.p.controller.PatientController       : REST request to delete patient: 1
 ]]></system-out>
   </testcase>
-  <testcase name="existsById_patientExists_returnsTrue" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.012"/>
-  <testcase name="deletePatient_patientFound_deletesPatient" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.023">
-    <system-out><![CDATA[2026-02-25T19:19:13.763Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Deleting patient with ID: 1
-2026-02-25T19:19:13.764Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : T6.2: Deleting medical records, consultations and appointments for patient: 1
-2026-02-25T19:19:13.768Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Patient deleted successfully: 1
+  <testcase name="deletePatient_patientNotFound_returns404" classname="com.hospital.patient.controller.PatientControllerTest" time="0.039">
+    <system-out><![CDATA[2026-02-25T19:19:12.650Z  INFO 21384 --- [patient-service] [           main] c.h.p.controller.PatientController       : REST request to delete patient: 1
+2026-02-25T19:19:12.659Z ERROR 21384 --- [patient-service] [           main] c.h.p.exception.GlobalExceptionHandler   : Patient not found: Patient not found with ID: 1
 ]]></system-out>
   </testcase>
-  <testcase name="getPatientByNationalId_patientNotFound_returnsEmptyOptional" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.012">
-    <system-out><![CDATA[2026-02-25T19:19:13.781Z DEBUG 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Fetching patient by national ID: AB123456
-]]></system-out>
-  </testcase>
-  <testcase name="getAllPatients_emptyResults_returnsEmptyList" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.015">
-    <system-out><![CDATA[2026-02-25T19:19:13.806Z DEBUG 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Fetching all patients
-]]></system-out>
-  </testcase>
-  <testcase name="updatePatient_patientFound_returnsUpdatedPatientDTO" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.017">
-    <system-out><![CDATA[2026-02-25T19:19:13.822Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Updating patient with ID: 1
-2026-02-25T19:19:13.824Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Patient updated successfully: 1
-]]></system-out>
-  </testcase>
-  <testcase name="getAllPatients_withResults_returnsListOfPatientDTO" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.018">
-    <system-out><![CDATA[2026-02-25T19:19:13.838Z DEBUG 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Fetching all patients
-]]></system-out>
-  </testcase>
-  <testcase name="getPatientById_patientFound_returnsOptionalWithPatientDTO" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.007">
-    <system-out><![CDATA[2026-02-25T19:19:13.855Z DEBUG 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Fetching patient by ID: 1
-]]></system-out>
-  </testcase>
-  <testcase name="searchPatients_matchingResults_returnsFilteredList" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.018">
-    <system-out><![CDATA[2026-02-25T19:19:13.867Z DEBUG 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Searching patients with term: Doe
-]]></system-out>
-  </testcase>
-  <testcase name="deletePatient_patientNotFound_throwsPatientNotFoundException" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.025">
-    <system-out><![CDATA[2026-02-25T19:19:13.899Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Deleting patient with ID: 1
-]]></system-out>
-  </testcase>
-  <testcase name="createPatient_validRequest_returnsPatientDTO" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.012">
-    <system-out><![CDATA[2026-02-25T19:19:13.917Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Creating new patient with national ID: AB123456
-2026-02-25T19:19:13.921Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Patient created with ID: 1
-]]></system-out>
-  </testcase>
-  <testcase name="getPatientByNationalId_patientFound_returnsOptionalWithPatientDTO" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.012">
-    <system-out><![CDATA[2026-02-25T19:19:13.933Z DEBUG 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Fetching patient by national ID: AB123456
-]]></system-out>
-  </testcase>
-  <testcase name="updatePatient_patientNotFound_throwsPatientNotFoundException" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.007">
-    <system-out><![CDATA[2026-02-25T19:19:13.946Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Updating patient with ID: 1
-]]></system-out>
-  </testcase>
-  <testcase name="existsById_patientDoesNotExist_returnsFalse" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.008"/>
-  <testcase name="getPatientDossier_patientNotFound_throwsPatientNotFoundException" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.011">
-    <system-out><![CDATA[2026-02-25T19:19:13.966Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : T6.3: Building full dossier for patient ID: 1
-2026-02-25T19:19:13.968Z DEBUG 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Fetching patient by ID: 1
-]]></system-out>
-  </testcase>
-  <testcase name="createPatient_duplicateNationalId_throwsDuplicatePatientException" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.015">
-    <system-out><![CDATA[2026-02-25T19:19:13.978Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Creating new patient with national ID: AB123456
-]]></system-out>
-  </testcase>
-  <testcase name="getPatientDossier_patientFound_aggregatesData" classname="com.hospital.patient.service.impl.PatientServiceImplTest" time="0.013">
-    <system-out><![CDATA[2026-02-25T19:19:13.996Z  INFO 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : T6.3: Building full dossier for patient ID: 1
-2026-02-25T19:19:13.998Z DEBUG 21384 --- [patient-service] [           main] c.h.p.service.impl.PatientServiceImpl    : Fetching patient by ID: 1
+  <testcase name="getPatientDossier_patientNotFound_returns404" classname="com.hospital.patient.controller.PatientControllerTest" time="0.021">
+    <system-out><![CDATA[2026-02-25T19:19:12.691Z  INFO 21384 --- [patient-service] [           main] c.h.p.controller.PatientController       : REST request to get full dossier for patient: 1
+2026-02-25T19:19:12.691Z ERROR 21384 --- [patient-service] [           main] c.h.p.exception.GlobalExceptionHandler   : Patient not found: Patient not found with ID: 1
 ]]></system-out>
   </testcase>
 </testsuite>
