@@ -199,6 +199,10 @@ Le build échoue automatiquement si un test échoue.
 | PUT | `/api/patients/{id}` | Mettre à jour un patient |
 | GET | `/api/patients` | Lister tous les patients |
 | GET | `/api/patients/search?q={term}` | Rechercher des patients |
+| DELETE | `/api/patients/{id}` | Supprimer un patient (effacement en cascade T6.2) |
+| GET | `/api/patients/{id}/dossier` | Dossier RGPD agrégé (T6.3) |
+| GET | `/api/patients/{id}/dossier/export` | Export du dossier en JSON téléchargeable (T6.6) |
+| GET | `/api/patients/{id}/exists` | Vérifier l'existence d'un patient |
 
 ### Staff Service (Port 8082)
 | Méthode | Endpoint | Description |
@@ -218,6 +222,7 @@ Le build échoue automatiquement si un test échoue.
 | PUT | `/api/appointments/{id}` | Mettre à jour un rendez-vous |
 | PUT | `/api/appointments/{id}/status` | Mettre à jour le statut |
 | DELETE | `/api/appointments/{id}` | Annuler un rendez-vous |
+| DELETE | `/api/appointments/patient/{patientId}` | Supprimer les rendez-vous d'un patient (T6.1, RBAC ADMIN) |
 | GET | `/api/appointments/patient/{patientId}` | Rendez-vous d'un patient |
 | GET | `/api/appointments/doctor/{doctorId}` | Rendez-vous d'un médecin |
 
@@ -228,6 +233,7 @@ Le build échoue automatiquement si un test échoue.
 | GET | `/api/consultations/{id}` | Obtenir une consultation |
 | PUT | `/api/consultations/{id}` | Mettre à jour une consultation |
 | GET | `/api/consultations/patient/{patientId}` | Historique d'un patient |
+| DELETE | `/api/consultations/patient/{patientId}` | Supprimer les consultations d'un patient (T6.1, RBAC ADMIN) |
 
 ### Medical Record Service (Port 8084)
 | Méthode | Endpoint | Description |
@@ -237,6 +243,12 @@ Le build échoue automatiquement si un test échoue.
 | GET | `/api/medical-records/patient/{patientId}` | Dossier d'un patient |
 | PUT | `/api/medical-records/{id}` | Mettre à jour un dossier |
 | POST | `/api/medical-records/{patientId}/entries` | Ajouter une entrée |
+| DELETE | `/api/medical-records/patient/{patientId}` | Supprimer le dossier d'un patient (T6.1, RBAC ADMIN) |
+
+### Cycle de vie des données patients (T6 / RGPD)
+
+- **Effacement en cascade (T6.1, T6.2)** : Les `DELETE /api/.../patient/{id}` sur medical-records, consultations et appointments sont réservés à l’**ADMIN** (RBAC au gateway). La suppression d’un patient via `DELETE /api/patients/{id}` déclenche l’effacement de ses données dans ces trois services (T6.2).
+- **Dossier et export (T6.3, T6.6)** : `GET /api/patients/{id}/dossier` retourne le dossier agrégé (patient + dossier médical + consultations + rendez-vous). `GET /api/patients/{id}/dossier/export` retourne le même contenu en pièce jointe JSON (`Content-Disposition: attachment`). L’accès à ces endpoints est contrôlé par le RBAC (rôles soignants autorisés, pas ROLE_PATIENT sur ces chemins).
 
 ## 🔧 Configuration
 

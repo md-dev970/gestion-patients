@@ -26,6 +26,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -127,9 +128,27 @@ class PatientControllerTest {
         mockMvc.perform(get("/api/patients/1/dossier/export")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(header().string("Content-Disposition",
                         "attachment; filename=\"patient-1-dossier.json\""))
                 .andExpect(jsonPath("$.patient.id").value(1));
+    }
+
+    @Test
+    @DisplayName("GET /api/patients/{id}/dossier/export - returns JSON content type (T6.7)")
+    void exportPatientDossier_returnsJsonContentType() throws Exception {
+        PatientDossierDTO dossier = PatientDossierDTO.builder()
+                .patient(PatientDTO.builder().id(1L).firstName("J").lastName("D").build())
+                .medicalRecord(null)
+                .consultations(List.of())
+                .appointments(List.of())
+                .build();
+        when(patientService.getPatientDossier(1L)).thenReturn(dossier);
+
+        mockMvc.perform(get("/api/patients/1/dossier/export")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test
