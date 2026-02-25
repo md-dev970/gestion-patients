@@ -1,9 +1,12 @@
 package com.hospital.patient.service.impl;
 
+import com.hospital.patient.client.AppointmentClient;
+import com.hospital.patient.client.ConsultationClient;
+import com.hospital.patient.client.MedicalRecordClient;
 import com.hospital.patient.dto.PatientCreateRequest;
 import com.hospital.patient.dto.PatientDTO;
-import com.hospital.patient.exception.PatientNotFoundException;
 import com.hospital.patient.exception.DuplicatePatientException;
+import com.hospital.patient.exception.PatientNotFoundException;
 import com.hospital.patient.mapper.PatientMapper;
 import com.hospital.patient.model.Patient;
 import com.hospital.patient.repository.PatientRepository;
@@ -40,6 +43,9 @@ public class PatientServiceImpl implements PatientService {
 
     private final PatientRepository patientRepository;
     private final PatientMapper patientMapper;
+    private final MedicalRecordClient medicalRecordClient;
+    private final ConsultationClient consultationClient;
+    private final AppointmentClient appointmentClient;
 
     @Override
     public PatientDTO createPatient(PatientCreateRequest request) {
@@ -128,6 +134,12 @@ public class PatientServiceImpl implements PatientService {
         if (!patientRepository.existsById(id)) {
             throw new PatientNotFoundException("Patient not found with ID: " + id);
         }
+
+        // T6.2: Cascade erasure of patient-related data across microservices
+        log.info("T6.2: Deleting medical records, consultations and appointments for patient: {}", id);
+        medicalRecordClient.deleteMedicalRecordsByPatientId(id);
+        consultationClient.deleteConsultationsByPatientId(id);
+        appointmentClient.deleteAppointmentsByPatientId(id);
 
         // TODO: Consider soft delete instead of hard delete
         // Business logic will be added in the specialized subject

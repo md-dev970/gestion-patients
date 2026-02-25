@@ -1,5 +1,8 @@
 package com.hospital.patient.service.impl;
 
+import com.hospital.patient.client.AppointmentClient;
+import com.hospital.patient.client.ConsultationClient;
+import com.hospital.patient.client.MedicalRecordClient;
 import com.hospital.patient.dto.PatientCreateRequest;
 import com.hospital.patient.dto.PatientDTO;
 import com.hospital.patient.exception.DuplicatePatientException;
@@ -34,6 +37,15 @@ class PatientServiceImplTest {
 
     @Mock
     private PatientMapper patientMapper;
+
+    @Mock
+    private MedicalRecordClient medicalRecordClient;
+
+    @Mock
+    private ConsultationClient consultationClient;
+
+    @Mock
+    private AppointmentClient appointmentClient;
 
     @InjectMocks
     private PatientServiceImpl patientService;
@@ -288,6 +300,9 @@ class PatientServiceImplTest {
     void deletePatient_patientFound_deletesPatient() {
         // Given
         when(patientRepository.existsById(1L)).thenReturn(true);
+        doNothing().when(medicalRecordClient).deleteMedicalRecordsByPatientId(1L);
+        doNothing().when(consultationClient).deleteConsultationsByPatientId(1L);
+        doNothing().when(appointmentClient).deleteAppointmentsByPatientId(1L);
         doNothing().when(patientRepository).deleteById(1L);
 
         // When
@@ -295,6 +310,9 @@ class PatientServiceImplTest {
 
         // Then
         verify(patientRepository).existsById(1L);
+        verify(medicalRecordClient).deleteMedicalRecordsByPatientId(1L);
+        verify(consultationClient).deleteConsultationsByPatientId(1L);
+        verify(appointmentClient).deleteAppointmentsByPatientId(1L);
         verify(patientRepository).deleteById(1L);
     }
 
@@ -309,6 +327,9 @@ class PatientServiceImplTest {
                 .isInstanceOf(PatientNotFoundException.class)
                 .hasMessageContaining("Patient not found");
         verify(patientRepository).existsById(1L);
+        verify(medicalRecordClient, never()).deleteMedicalRecordsByPatientId(anyLong());
+        verify(consultationClient, never()).deleteConsultationsByPatientId(anyLong());
+        verify(appointmentClient, never()).deleteAppointmentsByPatientId(anyLong());
         verify(patientRepository, never()).deleteById(any());
     }
 
