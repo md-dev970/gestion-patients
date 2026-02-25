@@ -1,6 +1,0 @@
-com\hospital\patient\client\AppointmentClient.class
-com\hospital\patient\client\ConsultationClientFallback.class
-com\hospital\patient\client\ConsultationClient.class
-com\hospital\patient\client\MedicalRecordClientFallback.class
-com\hospital\patient\client\AppointmentClientFallback.class
-com\hospital\patient\client\MedicalRecordClient.class

@@ -3,8 +3,12 @@ package com.hospital.patient.service.impl;
 import com.hospital.patient.client.AppointmentClient;
 import com.hospital.patient.client.ConsultationClient;
 import com.hospital.patient.client.MedicalRecordClient;
+import com.hospital.patient.dto.AppointmentSummaryDTO;
+import com.hospital.patient.dto.ConsultationSummaryDTO;
+import com.hospital.patient.dto.MedicalRecordSummaryDTO;
 import com.hospital.patient.dto.PatientCreateRequest;
 import com.hospital.patient.dto.PatientDTO;
+import com.hospital.patient.dto.PatientDossierDTO;
 import com.hospital.patient.exception.DuplicatePatientException;
 import com.hospital.patient.exception.PatientNotFoundException;
 import com.hospital.patient.mapper.PatientMapper;
@@ -331,6 +335,67 @@ class PatientServiceImplTest {
         verify(consultationClient, never()).deleteConsultationsByPatientId(anyLong());
         verify(appointmentClient, never()).deleteAppointmentsByPatientId(anyLong());
         verify(patientRepository, never()).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("getPatientDossier - patient found - aggregates data from downstream services")
+    void getPatientDossier_patientFound_aggregatesData() {
+        // Given
+        when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
+        when(patientMapper.toDTO(patient)).thenReturn(patientDTO);
+
+        MedicalRecordSummaryDTO record = MedicalRecordSummaryDTO.builder()
+                .id(10L)
+                .patientId(1L)
+                .allergies("Peanuts")
+                .build();
+        when(medicalRecordClient.getMedicalRecordByPatientId(1L)).thenReturn(record);
+
+        ConsultationSummaryDTO consultation = ConsultationSummaryDTO.builder()
+                .consultationId(java.util.UUID.randomUUID())
+                .patientId(1L)
+                .diagnostic("Flu")
+                .build();
+        when(consultationClient.getConsultationsByPatientId(1L))
+                .thenReturn(java.util.List.of(consultation));
+
+        AppointmentSummaryDTO appointment = AppointmentSummaryDTO.builder()
+                .id(100L)
+                .patientId(1L)
+                .reason("Checkup")
+                .build();
+        when(appointmentClient.getAppointmentsByPatientId(1L))
+                .thenReturn(java.util.List.of(appointment));
+
+        // When
+        PatientDossierDTO dossier = patientService.getPatientDossier(1L);
+
+        // Then
+        assertThat(dossier).isNotNull();
+        assertThat(dossier.getPatient()).isNotNull();
+        assertThat(dossier.getMedicalRecord()).isEqualTo(record);
+        assertThat(dossier.getConsultations()).hasSize(1);
+        assertThat(dossier.getAppointments()).hasSize(1);
+
+        verify(medicalRecordClient).getMedicalRecordByPatientId(1L);
+        verify(consultationClient).getConsultationsByPatientId(1L);
+        verify(appointmentClient).getAppointmentsByPatientId(1L);
+    }
+
+    @Test
+    @DisplayName("getPatientDossier - patient not found - throws PatientNotFoundException")
+    void getPatientDossier_patientNotFound_throwsPatientNotFoundException() {
+        // Given
+        when(patientRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // When/Then
+        assertThatThrownBy(() -> patientService.getPatientDossier(1L))
+                .isInstanceOf(PatientNotFoundException.class)
+                .hasMessageContaining("Patient not found");
+
+        verify(medicalRecordClient, never()).getMedicalRecordByPatientId(anyLong());
+        verify(consultationClient, never()).getConsultationsByPatientId(anyLong());
+        verify(appointmentClient, never()).getAppointmentsByPatientId(anyLong());
     }
 
     @Test

@@ -17,5 +17,12 @@ public class ConsultationClientFallback implements ConsultationClient {
                 + "Fallback triggered for deleteConsultationsByPatientId({}).", patientId);
         // TODO: Implement retry/compensation strategy in resilience subject.
     }
+
+    @Override
+    public java.util.List<com.hospital.patient.dto.ConsultationSummaryDTO> getConsultationsByPatientId(Long patientId) {
+        log.warn("T6.3: Consultations Service unavailable. "
+                + "Fallback triggered for getConsultationsByPatientId({}).", patientId);
+        return java.util.Collections.emptyList();
+    }
 }
 

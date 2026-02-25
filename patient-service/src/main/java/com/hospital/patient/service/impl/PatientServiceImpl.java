@@ -3,8 +3,12 @@ package com.hospital.patient.service.impl;
 import com.hospital.patient.client.AppointmentClient;
 import com.hospital.patient.client.ConsultationClient;
 import com.hospital.patient.client.MedicalRecordClient;
+import com.hospital.patient.dto.AppointmentSummaryDTO;
+import com.hospital.patient.dto.ConsultationSummaryDTO;
+import com.hospital.patient.dto.MedicalRecordSummaryDTO;
 import com.hospital.patient.dto.PatientCreateRequest;
 import com.hospital.patient.dto.PatientDTO;
+import com.hospital.patient.dto.PatientDossierDTO;
 import com.hospital.patient.exception.DuplicatePatientException;
 import com.hospital.patient.exception.PatientNotFoundException;
 import com.hospital.patient.mapper.PatientMapper;
@@ -151,6 +155,29 @@ public class PatientServiceImpl implements PatientService {
     @Transactional(readOnly = true)
     public boolean existsById(Long id) {
         return patientRepository.existsById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PatientDossierDTO getPatientDossier(Long id) {
+        log.info("T6.3: Building full dossier for patient ID: {}", id);
+
+        // Reuse existing mapping logic and 404 behaviour
+        PatientDTO patient = getPatientById(id)
+                .orElseThrow(() -> new PatientNotFoundException("Patient not found with ID: " + id));
+
+        MedicalRecordSummaryDTO medicalRecord = medicalRecordClient.getMedicalRecordByPatientId(id);
+        java.util.List<ConsultationSummaryDTO> consultations =
+                consultationClient.getConsultationsByPatientId(id);
+        java.util.List<AppointmentSummaryDTO> appointments =
+                appointmentClient.getAppointmentsByPatientId(id);
+
+        return PatientDossierDTO.builder()
+                .patient(patient)
+                .medicalRecord(medicalRecord)
+                .consultations(consultations)
+                .appointments(appointments)
+                .build();
     }
 }
 

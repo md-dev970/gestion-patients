@@ -17,5 +17,12 @@ public class MedicalRecordClientFallback implements MedicalRecordClient {
                 + "Fallback triggered for deleteMedicalRecordsByPatientId({}).", patientId);
         // TODO: Implement retry/compensation strategy in resilience subject.
     }
+
+    @Override
+    public com.hospital.patient.dto.MedicalRecordSummaryDTO getMedicalRecordByPatientId(Long patientId) {
+        log.warn("T6.3: Medical Record Service unavailable. "
+                + "Fallback triggered for getMedicalRecordByPatientId({}).", patientId);
+        return null;
+    }
 }
 

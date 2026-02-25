@@ -2,6 +2,7 @@ package com.hospital.patient.service;
 
 import com.hospital.patient.dto.PatientCreateRequest;
 import com.hospital.patient.dto.PatientDTO;
+import com.hospital.patient.dto.PatientDossierDTO;
 
 import java.util.List;
 import java.util.Optional;
@@ -92,5 +93,14 @@ public interface PatientService {
      * @return true if the patient exists
      */
     boolean existsById(Long id);
+
+    /**
+     * T6.3: Builds the full GDPR dossier for a patient by aggregating data
+     * from medical-record, consultations and appointment services.
+     *
+     * @param id The patient ID
+     * @return Aggregated dossier for the patient
+     */
+    PatientDossierDTO getPatientDossier(Long id);
 }
 

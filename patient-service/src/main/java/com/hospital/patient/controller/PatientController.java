@@ -2,6 +2,7 @@ package com.hospital.patient.controller;
 
 import com.hospital.patient.dto.PatientCreateRequest;
 import com.hospital.patient.dto.PatientDTO;
+import com.hospital.patient.dto.PatientDossierDTO;
 import com.hospital.patient.service.PatientService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -92,6 +93,19 @@ public class PatientController {
         return patientService.getPatientById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * T6.3: Returns the full GDPR dossier for a patient (aggregated view).
+     *
+     * @param id The patient ID
+     * @return Aggregated dossier with HTTP 200, or 404 if patient not found
+     */
+    @GetMapping("/{id}/dossier")
+    public ResponseEntity<PatientDossierDTO> getPatientDossier(@PathVariable Long id) {
+        log.info("REST request to get full dossier for patient: {}", id);
+        PatientDossierDTO dossier = patientService.getPatientDossier(id);
+        return ResponseEntity.ok(dossier);
     }
 
     /**

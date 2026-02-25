@@ -17,5 +17,12 @@ public class AppointmentClientFallback implements AppointmentClient {
                 + "Fallback triggered for deleteAppointmentsByPatientId({}).", patientId);
         // TODO: Implement retry/compensation strategy in resilience subject.
     }
+
+    @Override
+    public java.util.List<com.hospital.patient.dto.AppointmentSummaryDTO> getAppointmentsByPatientId(Long patientId) {
+        log.warn("T6.3: Appointment Service unavailable. "
+                + "Fallback triggered for getAppointmentsByPatientId({}).", patientId);
+        return java.util.Collections.emptyList();
+    }
 }
 
