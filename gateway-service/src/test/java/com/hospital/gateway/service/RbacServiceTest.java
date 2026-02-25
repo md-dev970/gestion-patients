@@ -42,6 +42,19 @@ class RbacServiceTest {
     }
 
     @Test
+    @DisplayName("GET /api/patients/{id}/dossier with ROLE_DOCTOR is allowed (T6.4)")
+    void isAllowed_patientDossierRead_doctor_allowed() {
+        assertThat(rbacService.isAllowed("/api/patients/1/dossier", "GET", List.of("ROLE_DOCTOR"))).isTrue();
+        assertThat(rbacService.isAllowed("/api/patients/1/dossier", "GET", List.of("ROLE_MEDECIN"))).isTrue();
+    }
+
+    @Test
+    @DisplayName("GET /api/patients/{id}/dossier with ROLE_PATIENT is denied (T6.4)")
+    void isAllowed_patientDossierRead_patient_denied() {
+        assertThat(rbacService.isAllowed("/api/patients/1/dossier", "GET", List.of("ROLE_PATIENT"))).isFalse();
+    }
+
+    @Test
     @DisplayName("DELETE /api/patients with ROLE_NURSE is denied")
     void isAllowed_patientsDelete_nurse_denied() {
         assertThat(rbacService.isAllowed("/api/patients/1", "DELETE", List.of("ROLE_NURSE"))).isFalse();
