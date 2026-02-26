@@ -35,8 +35,9 @@ public class RbacService {
     }
 
     /**
-     * Same as {@link #isAllowed(String, String, List)} with optional userId for "own dossier" rule (T6.9).
-     * When the user has ROLE_PATIENT and requests GET /api/patients/{id}/dossier or .../dossier/export, access is allowed only if path id equals userId.
+     * Same as {@link #isAllowed(String, String, List)} with optional userId for "own resource" rules.
+     * T6.9: ROLE_PATIENT may GET /api/patients/{id}/dossier or .../dossier/export only when path id = userId.
+     * T6.10: ROLE_PATIENT may DELETE /api/patients/{id} only when path id = userId (right to erasure).
      */
     public boolean isAllowed(String path, String method, List<String> roles, String userId) {
         Optional<Resource> resource = resolveResource(path);
@@ -48,10 +49,16 @@ public class RbacService {
         // T6.9: ROLE_PATIENT may access only their own dossier (GET dossier or dossier/export when path id = userId)
         if (resource.get() == Resource.PATIENTS && action == Action.READ && hasRole(roles, ROLE_PATIENT) && userId != null && !userId.isBlank()) {
             String pathId = extractResourceId(path, Resource.PATIENTS);
-            if (pathId != null && pathId.equals(userId.trim())) {
-                if (path.contains("/dossier")) {
-                    return true;
-                }
+            if (pathId != null && pathId.equals(userId.trim()) && path.contains("/dossier")) {
+                return true;
+            }
+        }
+
+        // T6.10: ROLE_PATIENT may DELETE only their own patient record (right to erasure)
+        if (resource.get() == Resource.PATIENTS && action == Action.DELETE && hasRole(roles, ROLE_PATIENT) && userId != null && !userId.isBlank()) {
+            String pathId = extractResourceId(path, Resource.PATIENTS);
+            if (pathId != null && pathId.equals(userId.trim()) && !path.contains("/dossier")) {
+                return true;
             }
         }
 

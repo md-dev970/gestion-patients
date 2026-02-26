@@ -17,7 +17,7 @@ public final class RbacPolicy {
     private static final String NURSE = "ROLE_NURSE";
     private static final String RECEPTIONIST = "ROLE_RECEPTIONIST";
     private static final String LAB_TECH = "ROLE_LAB_TECH";
-    // ROLE_PATIENT: no access in this matrix; T6.9 own-dossier (GET dossier/export when path id = userId) is handled in RbacService
+    // ROLE_PATIENT: no access in this matrix; T6.9 own-dossier and T6.10 own-record DELETE are handled in RbacService
 
     private RbacPolicy() {}
 
@@ -39,7 +39,7 @@ public final class RbacPolicy {
             case READ -> Set.of(ADMIN, MEDECIN, DOCTOR, INFIRMIER, NURSE, RECEPTIONIST, LAB_TECH);
             case CREATE -> Set.of(ADMIN, MEDECIN, DOCTOR, NURSE, RECEPTIONIST);
             case UPDATE -> Set.of(ADMIN, MEDECIN, DOCTOR, NURSE);
-            case DELETE -> Set.of(ADMIN);
+            case DELETE -> Set.of(ADMIN);  // T6.10: ROLE_PATIENT may DELETE own record (path id = userId) in RbacService
         };
     }
 

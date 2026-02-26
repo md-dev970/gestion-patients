@@ -113,6 +113,27 @@ class RbacServiceTest {
     }
 
     @Test
+    @DisplayName("DELETE /api/patients/{id} with ROLE_PATIENT and matching userId is allowed (T6.10)")
+    void isAllowed_patientsDelete_patient_ownRecord_allowed() {
+        assertThat(rbacService.isAllowed("/api/patients/42", "DELETE", List.of("ROLE_PATIENT"), "42")).isTrue();
+        assertThat(rbacService.isAllowed("/api/patients/1", "DELETE", List.of("ROLE_PATIENT"), "1")).isTrue();
+    }
+
+    @Test
+    @DisplayName("DELETE /api/patients/{id} with ROLE_PATIENT and non-matching userId is denied (T6.10)")
+    void isAllowed_patientsDelete_patient_otherRecord_denied() {
+        assertThat(rbacService.isAllowed("/api/patients/42", "DELETE", List.of("ROLE_PATIENT"), "99")).isFalse();
+        assertThat(rbacService.isAllowed("/api/patients/1", "DELETE", List.of("ROLE_PATIENT"), "2")).isFalse();
+    }
+
+    @Test
+    @DisplayName("DELETE /api/patients/{id} with ROLE_PATIENT and no userId is denied (T6.10)")
+    void isAllowed_patientsDelete_patient_noUserId_denied() {
+        assertThat(rbacService.isAllowed("/api/patients/42", "DELETE", List.of("ROLE_PATIENT"))).isFalse();
+        assertThat(rbacService.isAllowed("/api/patients/42", "DELETE", List.of("ROLE_PATIENT"), null)).isFalse();
+    }
+
+    @Test
     @DisplayName("GET /api/medical-records with ROLE_LAB_TECH is allowed")
     void isAllowed_medicalRecordsRead_labTech_allowed() {
         assertThat(rbacService.isAllowed("/api/medical-records/patient/1", "GET", List.of("ROLE_LAB_TECH"))).isTrue();

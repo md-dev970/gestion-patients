@@ -203,6 +203,43 @@ class RbacAuthorizationFilterTest {
     }
 
     @Test
+    @DisplayName("DELETE /api/patients/{id} with ROLE_PATIENT and matching userId - allowed (T6.10)")
+    void filter_patientDelete_patient_ownRecord_allowed() {
+        ServerWebExchange exchange = exchange("/api/patients/42", "DELETE", "patient1", "42", "ROLE_PATIENT");
+        when(rbacService.resolveResource("/api/patients/42")).thenReturn(java.util.Optional.of(Resource.PATIENTS));
+        when(rbacService.isAllowed("/api/patients/42", "DELETE", List.of("ROLE_PATIENT"), "42")).thenReturn(true);
+        when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
+
+        StepVerifier.create(filter.filter(exchange, filterChain)).verifyComplete();
+
+        verify(filterChain).filter(exchange);
+        assertThat(exchange.getResponse().getStatusCode()).isNull();
+        verify(securityAuditSender, never()).sendAccessDenied(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("DELETE /api/patients/{id} with ROLE_PATIENT and non-matching userId - 403 and audit (T6.10)")
+    void filter_patientDelete_patient_otherRecord_denied() {
+        ServerWebExchange exchange = exchange("/api/patients/42", "DELETE", "patient1", "99", "ROLE_PATIENT");
+        when(rbacService.resolveResource("/api/patients/42")).thenReturn(java.util.Optional.of(Resource.PATIENTS));
+        when(rbacService.isAllowed("/api/patients/42", "DELETE", List.of("ROLE_PATIENT"), "99")).thenReturn(false);
+        when(rbacService.resolveAction("DELETE")).thenReturn(Action.DELETE);
+        when(rbacService.extractResourceId("/api/patients/42", Resource.PATIENTS)).thenReturn("42");
+
+        StepVerifier.create(filter.filter(exchange, filterChain)).verifyComplete();
+
+        verify(filterChain, never()).filter(any());
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        verify(securityAuditSender).sendAccessDenied(
+                eq("99"),
+                eq(Resource.PATIENTS),
+                eq("42"),
+                eq(Action.DELETE),
+                eq("RBAC_DENY")
+        );
+    }
+
+    @Test
     @DisplayName("getOrder returns -50")
     void getOrder_returns50() {
         assertThat(filter.getOrder()).isEqualTo(-50);
