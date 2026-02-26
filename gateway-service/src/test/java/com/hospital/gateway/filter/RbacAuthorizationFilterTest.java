@@ -64,7 +64,7 @@ class RbacAuthorizationFilterTest {
     void filter_allowedRole_callsChain() {
         ServerWebExchange exchange = exchange("/api/patients/1", "GET", "doctor1", "10", "ROLE_DOCTOR");
         when(rbacService.resolveResource("/api/patients/1")).thenReturn(java.util.Optional.of(Resource.PATIENTS));
-        when(rbacService.isAllowed("/api/patients/1", "GET", List.of("ROLE_DOCTOR"))).thenReturn(true);
+        when(rbacService.isAllowed("/api/patients/1", "GET", List.of("ROLE_DOCTOR"), "10")).thenReturn(true);
         when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
         StepVerifier.create(filter.filter(exchange, filterChain)).verifyComplete();
@@ -79,7 +79,7 @@ class RbacAuthorizationFilterTest {
     void filter_deniedRole_returns403_andAuditInvoked() {
         ServerWebExchange exchange = exchange("/api/patients", "GET", "patient1", "99", "ROLE_PATIENT");
         when(rbacService.resolveResource("/api/patients")).thenReturn(java.util.Optional.of(Resource.PATIENTS));
-        when(rbacService.isAllowed("/api/patients", "GET", List.of("ROLE_PATIENT"))).thenReturn(false);
+        when(rbacService.isAllowed("/api/patients", "GET", List.of("ROLE_PATIENT"), "99")).thenReturn(false);
         when(rbacService.resolveAction("GET")).thenReturn(Action.READ);
         when(rbacService.extractResourceId("/api/patients", Resource.PATIENTS)).thenReturn(null);
 
@@ -119,7 +119,7 @@ class RbacAuthorizationFilterTest {
         StepVerifier.create(filter.filter(exchange, filterChain)).verifyComplete();
 
         verify(filterChain).filter(exchange);
-        verify(rbacService, never()).isAllowed(any(), any(), any());
+        verify(rbacService, never()).isAllowed(any(), any(), any(), any());
     }
 
     @Test
@@ -127,7 +127,7 @@ class RbacAuthorizationFilterTest {
     void filter_medicalRecordsDelete_nurse_403_auditWithResourceId() {
         ServerWebExchange exchange = exchange("/api/medical-records/1", "DELETE", "nurse1", "20", "ROLE_NURSE");
         when(rbacService.resolveResource("/api/medical-records/1")).thenReturn(java.util.Optional.of(Resource.MEDICAL_RECORDS));
-        when(rbacService.isAllowed("/api/medical-records/1", "DELETE", List.of("ROLE_NURSE"))).thenReturn(false);
+        when(rbacService.isAllowed("/api/medical-records/1", "DELETE", List.of("ROLE_NURSE"), "20")).thenReturn(false);
         when(rbacService.resolveAction("DELETE")).thenReturn(Action.DELETE);
         when(rbacService.extractResourceId("/api/medical-records/1", Resource.MEDICAL_RECORDS)).thenReturn("1");
 
@@ -152,7 +152,7 @@ class RbacAuthorizationFilterTest {
     void filter_dossierGet_doctor_allowed() {
         ServerWebExchange exchange = exchange("/api/patients/1/dossier", "GET", "doctor1", "10", "ROLE_DOCTOR");
         when(rbacService.resolveResource("/api/patients/1/dossier")).thenReturn(java.util.Optional.of(Resource.PATIENTS));
-        when(rbacService.isAllowed("/api/patients/1/dossier", "GET", List.of("ROLE_DOCTOR"))).thenReturn(true);
+        when(rbacService.isAllowed("/api/patients/1/dossier", "GET", List.of("ROLE_DOCTOR"), "10")).thenReturn(true);
         when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
         StepVerifier.create(filter.filter(exchange, filterChain)).verifyComplete();
@@ -163,11 +163,11 @@ class RbacAuthorizationFilterTest {
     }
 
     @Test
-    @DisplayName("GET /api/patients/{id}/dossier with ROLE_PATIENT - 403 and audit (T6.4)")
+    @DisplayName("GET /api/patients/{id}/dossier with ROLE_PATIENT and wrong userId - 403 and audit (T6.4/T6.9)")
     void filter_dossierGet_patient_denied() {
         ServerWebExchange exchange = exchange("/api/patients/42/dossier", "GET", "patient1", "99", "ROLE_PATIENT");
         when(rbacService.resolveResource("/api/patients/42/dossier")).thenReturn(java.util.Optional.of(Resource.PATIENTS));
-        when(rbacService.isAllowed("/api/patients/42/dossier", "GET", List.of("ROLE_PATIENT"))).thenReturn(false);
+        when(rbacService.isAllowed("/api/patients/42/dossier", "GET", List.of("ROLE_PATIENT"), "99")).thenReturn(false);
         when(rbacService.resolveAction("GET")).thenReturn(Action.READ);
         when(rbacService.extractResourceId("/api/patients/42/dossier", Resource.PATIENTS)).thenReturn("42");
 
@@ -185,6 +185,21 @@ class RbacAuthorizationFilterTest {
                 eq("RBAC_DENY")
         );
         assertThat(resourceIdCaptor.getValue()).isEqualTo("42");
+    }
+
+    @Test
+    @DisplayName("GET /api/patients/{id}/dossier with ROLE_PATIENT and matching userId - allowed (T6.9)")
+    void filter_dossierGet_patient_ownDossier_allowed() {
+        ServerWebExchange exchange = exchange("/api/patients/42/dossier", "GET", "patient1", "42", "ROLE_PATIENT");
+        when(rbacService.resolveResource("/api/patients/42/dossier")).thenReturn(java.util.Optional.of(Resource.PATIENTS));
+        when(rbacService.isAllowed("/api/patients/42/dossier", "GET", List.of("ROLE_PATIENT"), "42")).thenReturn(true);
+        when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
+
+        StepVerifier.create(filter.filter(exchange, filterChain)).verifyComplete();
+
+        verify(filterChain).filter(exchange);
+        assertThat(exchange.getResponse().getStatusCode()).isNull();
+        verify(securityAuditSender, never()).sendAccessDenied(any(), any(), any(), any(), any());
     }
 
     @Test

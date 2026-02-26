@@ -49,9 +49,42 @@ class RbacServiceTest {
     }
 
     @Test
-    @DisplayName("GET /api/patients/{id}/dossier with ROLE_PATIENT is denied (T6.4)")
-    void isAllowed_patientDossierRead_patient_denied() {
+    @DisplayName("GET /api/patients/{id}/dossier with ROLE_PATIENT is denied when no userId (T6.4)")
+    void isAllowed_patientDossierRead_patient_denied_noUserId() {
         assertThat(rbacService.isAllowed("/api/patients/1/dossier", "GET", List.of("ROLE_PATIENT"))).isFalse();
+        assertThat(rbacService.isAllowed("/api/patients/1/dossier", "GET", List.of("ROLE_PATIENT"), null)).isFalse();
+    }
+
+    @Test
+    @DisplayName("GET /api/patients/{id}/dossier with ROLE_PATIENT and matching userId is allowed (T6.9)")
+    void isAllowed_patientDossierRead_patient_ownDossier_allowed() {
+        assertThat(rbacService.isAllowed("/api/patients/42/dossier", "GET", List.of("ROLE_PATIENT"), "42")).isTrue();
+        assertThat(rbacService.isAllowed("/api/patients/1/dossier", "GET", List.of("ROLE_PATIENT"), "1")).isTrue();
+    }
+
+    @Test
+    @DisplayName("GET /api/patients/{id}/dossier with ROLE_PATIENT and non-matching userId is denied (T6.9)")
+    void isAllowed_patientDossierRead_patient_otherDossier_denied() {
+        assertThat(rbacService.isAllowed("/api/patients/42/dossier", "GET", List.of("ROLE_PATIENT"), "99")).isFalse();
+        assertThat(rbacService.isAllowed("/api/patients/1/dossier", "GET", List.of("ROLE_PATIENT"), "2")).isFalse();
+    }
+
+    @Test
+    @DisplayName("GET /api/patients/{id}/dossier/export with ROLE_PATIENT and matching userId is allowed (T6.9)")
+    void isAllowed_patientDossierExport_patient_ownDossier_allowed() {
+        assertThat(rbacService.isAllowed("/api/patients/42/dossier/export", "GET", List.of("ROLE_PATIENT"), "42")).isTrue();
+    }
+
+    @Test
+    @DisplayName("GET /api/patients/{id}/dossier/export with ROLE_PATIENT and non-matching userId is denied (T6.9)")
+    void isAllowed_patientDossierExport_patient_otherDossier_denied() {
+        assertThat(rbacService.isAllowed("/api/patients/42/dossier/export", "GET", List.of("ROLE_PATIENT"), "99")).isFalse();
+    }
+
+    @Test
+    @DisplayName("GET /api/patients/{id} (no dossier) with ROLE_PATIENT and matching id still denied (T6.9)")
+    void isAllowed_patientRead_patient_noOwnDossierRule_denied() {
+        assertThat(rbacService.isAllowed("/api/patients/42", "GET", List.of("ROLE_PATIENT"), "42")).isFalse();
     }
 
     @Test
@@ -62,8 +95,8 @@ class RbacServiceTest {
     }
 
     @Test
-    @DisplayName("GET /api/patients/{id}/dossier/export with ROLE_PATIENT is denied (T6.6)")
-    void isAllowed_patientDossierExport_patient_denied() {
+    @DisplayName("GET /api/patients/{id}/dossier/export with ROLE_PATIENT and no userId is denied (T6.6)")
+    void isAllowed_patientDossierExport_patient_denied_noUserId() {
         assertThat(rbacService.isAllowed("/api/patients/1/dossier/export", "GET", List.of("ROLE_PATIENT"))).isFalse();
     }
 

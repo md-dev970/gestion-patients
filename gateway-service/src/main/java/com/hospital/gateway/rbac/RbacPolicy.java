@@ -17,7 +17,7 @@ public final class RbacPolicy {
     private static final String NURSE = "ROLE_NURSE";
     private static final String RECEPTIONIST = "ROLE_RECEPTIONIST";
     private static final String LAB_TECH = "ROLE_LAB_TECH";
-    // ROLE_PATIENT: no access to patient-dossier paths in this matrix
+    // ROLE_PATIENT: no access in this matrix; T6.9 own-dossier (GET dossier/export when path id = userId) is handled in RbacService
 
     private RbacPolicy() {}
 

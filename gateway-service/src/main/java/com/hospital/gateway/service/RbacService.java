@@ -23,16 +23,38 @@ public class RbacService {
     private static final String PREFIX_CONSULTATIONS = "/api/consultations";
     private static final String PREFIX_APPOINTMENTS = "/api/appointments";
 
+    private static final String ROLE_PATIENT = "ROLE_PATIENT";
+
     /**
      * Returns true if the request is allowed for at least one of the given roles.
      * For paths not under /api/patients, /api/medical-records, /api/consultations, or /api/appointments, returns true (no RBAC).
+     * Use {@link #isAllowed(String, String, List, String)} when checking dossier access for ROLE_PATIENT (T6.9 own-dossier).
      */
     public boolean isAllowed(String path, String method, List<String> roles) {
+        return isAllowed(path, method, roles, null);
+    }
+
+    /**
+     * Same as {@link #isAllowed(String, String, List)} with optional userId for "own dossier" rule (T6.9).
+     * When the user has ROLE_PATIENT and requests GET /api/patients/{id}/dossier or .../dossier/export, access is allowed only if path id equals userId.
+     */
+    public boolean isAllowed(String path, String method, List<String> roles, String userId) {
         Optional<Resource> resource = resolveResource(path);
         if (resource.isEmpty()) {
             return true;
         }
         Action action = resolveAction(method);
+
+        // T6.9: ROLE_PATIENT may access only their own dossier (GET dossier or dossier/export when path id = userId)
+        if (resource.get() == Resource.PATIENTS && action == Action.READ && hasRole(roles, ROLE_PATIENT) && userId != null && !userId.isBlank()) {
+            String pathId = extractResourceId(path, Resource.PATIENTS);
+            if (pathId != null && pathId.equals(userId.trim())) {
+                if (path.contains("/dossier")) {
+                    return true;
+                }
+            }
+        }
+
         Set<String> allowed = RbacPolicy.allowedRoles(resource.get(), action);
         if (roles == null || roles.isEmpty()) {
             return false;
@@ -41,6 +63,14 @@ public class RbacService {
             if (role != null && allowed.contains(role.trim())) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    private static boolean hasRole(List<String> roles, String role) {
+        if (roles == null) return false;
+        for (String r : roles) {
+            if (role.equals(r != null ? r.trim() : null)) return true;
         }
         return false;
     }

@@ -58,18 +58,19 @@ public class RbacAuthorizationFilter implements GlobalFilter, Ordered {
         String rolesHeader = exchange.getRequest().getHeaders().getFirst(HEADER_USER_ROLES);
         List<String> roles = parseRoles(rolesHeader);
         String method = exchange.getRequest().getMethod().name();
+        String userId = exchange.getRequest().getHeaders().getFirst(HEADER_USER_ID);
 
-        if (rbacService.isAllowed(path, method, roles)) {
+        if (rbacService.isAllowed(path, method, roles, userId)) {
             return chain.filter(exchange);
         }
 
-        String userId = exchange.getRequest().getHeaders().getFirst(HEADER_USER_ID);
+        String deniedUserId = exchange.getRequest().getHeaders().getFirst(HEADER_USER_ID);
         Resource resource = resourceOpt.get();
         Action action = rbacService.resolveAction(method);
         String resourceId = rbacService.extractResourceId(path, resource);
 
         securityAuditSender.sendAccessDenied(
-                userId != null ? userId : "",
+                deniedUserId != null ? deniedUserId : "",
                 resource,
                 resourceId != null ? resourceId : "",
                 action,
