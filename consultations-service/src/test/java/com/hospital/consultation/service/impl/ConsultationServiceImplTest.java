@@ -38,6 +38,9 @@ class ConsultationServiceImplTest {
     @Mock
     private ConsultationMapper consultationMapper;
 
+    @Mock
+    private SecurityAuditSender securityAuditSender;
+
     @InjectMocks
     private ConsultationServiceImpl consultationService;
 

@@ -36,6 +36,7 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     private final ConsultationRepository consultationRepository;
     private final ConsultationMapper consultationMapper;
+    private final SecurityAuditSender securityAuditSender;
 
     @Override
     public ConsultationDTO createConsultation(ConsultationCreateRequest request) {
