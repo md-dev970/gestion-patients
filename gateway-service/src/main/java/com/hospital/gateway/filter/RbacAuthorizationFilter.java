@@ -32,6 +32,7 @@ public class RbacAuthorizationFilter implements GlobalFilter, Ordered {
     private static final String HEADER_USERNAME = "X-Username";
     private static final String HEADER_USER_ROLES = "X-User-Roles";
     private static final String FORBIDDEN_BODY = "{\"error\":\"Forbidden\"}";
+    private static final String ROLE_PATIENT = "ROLE_PATIENT";
 
     private final RbacService rbacService;
     private final SecurityAuditSender securityAuditSender;
@@ -61,6 +62,14 @@ public class RbacAuthorizationFilter implements GlobalFilter, Ordered {
         String userId = exchange.getRequest().getHeaders().getFirst(HEADER_USER_ID);
 
         if (rbacService.isAllowed(path, method, roles, userId)) {
+            // T6.11: Audit when a patient is allowed to delete their own record (distinguish from admin-initiated)
+            Resource resource = resourceOpt.get();
+            if (resource == Resource.PATIENTS && rbacService.resolveAction(method) == Action.DELETE && hasRole(roles, ROLE_PATIENT)) {
+                String resourceId = rbacService.extractResourceId(path, resource);
+                if (resourceId != null) {
+                    securityAuditSender.sendPatientSelfDeletionRequested(resourceId);
+                }
+            }
             return chain.filter(exchange);
         }
 
@@ -92,6 +101,14 @@ public class RbacAuthorizationFilter implements GlobalFilter, Ordered {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
+    }
+
+    private static boolean hasRole(List<String> roles, String role) {
+        if (roles == null || role == null) return false;
+        for (String r : roles) {
+            if (role.equals(r != null ? r.trim() : null)) return true;
+        }
+        return false;
     }
 
     @Override

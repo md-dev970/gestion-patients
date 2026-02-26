@@ -85,6 +85,17 @@ public class HttpSecurityAuditSender implements SecurityAuditSender {
         }
     }
 
+    @Override
+    public void sendPatientSelfDeletionRequested(String patientId) {
+        Map<String, Object> payload = Map.of(
+                "eventType", "PATIENT_SELF_DELETION_REQUESTED",
+                "timestamp", Instant.now().toString(),
+                "resourceType", "PATIENTS",
+                "resourceId", patientId != null ? patientId : ""
+        );
+        postToAudit(payload, "PATIENT_SELF_DELETION_REQUESTED");
+    }
+
     private void postToAudit(Map<String, Object> payload, String eventLabel) {
         webClient.post()
                 .uri(auditUrl)

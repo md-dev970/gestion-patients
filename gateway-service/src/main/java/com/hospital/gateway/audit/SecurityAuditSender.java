@@ -34,4 +34,13 @@ public interface SecurityAuditSender {
      * @param category  "SQLI" or "XSS"
      */
     void sendSuspiciousInput(String eventType, String source, String path, String method, String category);
+
+    /**
+     * Sends a PATIENT_SELF_DELETION_REQUESTED event when a ROLE_PATIENT is allowed to DELETE their own record (T6.11).
+     * Enables the audit log to distinguish patient-initiated from admin-initiated deletion.
+     * Implementations should be non-blocking (fire-and-forget). No PII in the payload.
+     *
+     * @param patientId the patient ID (resource id from path)
+     */
+    void sendPatientSelfDeletionRequested(String patientId);
 }

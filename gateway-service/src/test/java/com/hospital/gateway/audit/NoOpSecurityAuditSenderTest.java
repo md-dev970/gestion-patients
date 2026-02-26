@@ -23,4 +23,11 @@ class NoOpSecurityAuditSenderTest {
                 "SUSPICIOUS_INPUT", "query", "/api/patients/search", "GET", "SQLI"))
                 .doesNotThrowAnyException();
     }
+
+    @Test
+    @DisplayName("sendPatientSelfDeletionRequested does not throw (T6.11)")
+    void sendPatientSelfDeletionRequested_doesNotThrow() {
+        assertThatCode(() -> sender.sendPatientSelfDeletionRequested("42"))
+                .doesNotThrowAnyException();
+    }
 }

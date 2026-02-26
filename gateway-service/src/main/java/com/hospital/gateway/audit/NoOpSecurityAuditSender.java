@@ -40,4 +40,11 @@ public class NoOpSecurityAuditSender implements SecurityAuditSender {
                     eventType, source, path, method, category);
         }
     }
+
+    @Override
+    public void sendPatientSelfDeletionRequested(String patientId) {
+        if (log.isDebugEnabled()) {
+            log.debug("PATIENT_SELF_DELETION_REQUESTED (no-op audit): patientId={}", patientId);
+        }
+    }
 }

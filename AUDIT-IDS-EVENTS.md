@@ -74,6 +74,21 @@ Implementations are fire-and-forget; failures to send are logged and do not affe
 
 ---
 
+## PATIENT_SELF_DELETION_REQUESTED (T6.11)
+
+Emitted by the **gateway** when a user with **ROLE_PATIENT** is **allowed** to DELETE their own patient record (`DELETE /api/patients/{id}` where id = user id). Lets the audit log distinguish patient-initiated deletion (right to erasure) from admin-initiated deletion. No PII in the payload.
+
+| Field          | Type   | Description |
+|----------------|--------|-------------|
+| `eventType`    | string | Always `"PATIENT_SELF_DELETION_REQUESTED"` |
+| `timestamp`    | string | ISO-8601 instant |
+| `resourceType` | string | Always `"PATIENTS"` |
+| `resourceId`   | string | Patient ID from the path (no PII). |
+
+**When it is sent:** Immediately when the gateway allows the request (before proxying to patient-service). Not sent when the requester is ADMIN or when the request is denied (e.g. PATIENT trying to delete another patient).
+
+---
+
 ## Gateway-only events (reference)
 
 These are sent by the gateway when `security.audit.url` is set.

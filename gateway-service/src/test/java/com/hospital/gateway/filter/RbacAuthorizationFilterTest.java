@@ -203,11 +203,13 @@ class RbacAuthorizationFilterTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/patients/{id} with ROLE_PATIENT and matching userId - allowed (T6.10)")
+    @DisplayName("DELETE /api/patients/{id} with ROLE_PATIENT and matching userId - allowed and emits PATIENT_SELF_DELETION_REQUESTED (T6.10, T6.11)")
     void filter_patientDelete_patient_ownRecord_allowed() {
         ServerWebExchange exchange = exchange("/api/patients/42", "DELETE", "patient1", "42", "ROLE_PATIENT");
         when(rbacService.resolveResource("/api/patients/42")).thenReturn(java.util.Optional.of(Resource.PATIENTS));
         when(rbacService.isAllowed("/api/patients/42", "DELETE", List.of("ROLE_PATIENT"), "42")).thenReturn(true);
+        when(rbacService.resolveAction("DELETE")).thenReturn(Action.DELETE);
+        when(rbacService.extractResourceId("/api/patients/42", Resource.PATIENTS)).thenReturn("42");
         when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
         StepVerifier.create(filter.filter(exchange, filterChain)).verifyComplete();
@@ -215,6 +217,21 @@ class RbacAuthorizationFilterTest {
         verify(filterChain).filter(exchange);
         assertThat(exchange.getResponse().getStatusCode()).isNull();
         verify(securityAuditSender, never()).sendAccessDenied(any(), any(), any(), any(), any());
+        verify(securityAuditSender).sendPatientSelfDeletionRequested("42");
+    }
+
+    @Test
+    @DisplayName("DELETE /api/patients/{id} with ROLE_ADMIN - allowed, no PATIENT_SELF_DELETION_REQUESTED (T6.11)")
+    void filter_patientDelete_admin_allowed_noSelfDeletionEvent() {
+        ServerWebExchange exchange = exchange("/api/patients/42", "DELETE", "admin1", "1", "ROLE_ADMIN");
+        when(rbacService.resolveResource("/api/patients/42")).thenReturn(java.util.Optional.of(Resource.PATIENTS));
+        when(rbacService.isAllowed("/api/patients/42", "DELETE", List.of("ROLE_ADMIN"), "1")).thenReturn(true);
+        when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
+
+        StepVerifier.create(filter.filter(exchange, filterChain)).verifyComplete();
+
+        verify(filterChain).filter(exchange);
+        verify(securityAuditSender, never()).sendPatientSelfDeletionRequested(any());
     }
 
     @Test
