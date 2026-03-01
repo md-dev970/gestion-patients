@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -196,5 +197,29 @@ public class AuthServiceImpl implements AuthService {
     public boolean validateToken(String token) {
         log.debug("Validating token");
         return jwtService.validateToken(token);
+    }
+
+    @Override
+    public void anonymizeAccount(Long userId) {
+        log.info("Anonymizing account for user id: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setUsername("anonymized-" + userId);
+        user.setEmail("anonymized-" + userId + "@anonymized.local");
+        user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+        user.setEnabled(false);
+        user.setAccountNonLocked(false);
+        userRepository.save(user);
+        log.info("Account anonymized for user id: {}", userId);
+    }
+
+    @Override
+    public void deleteAccount(Long userId) {
+        log.info("Deleting account for user id: {}", userId);
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("User not found");
+        }
+        userRepository.deleteById(userId);
+        log.info("Account deleted for user id: {}", userId);
     }
 }

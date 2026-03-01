@@ -67,4 +67,39 @@ public class HttpSecurityAuditSender implements SecurityAuditSender {
             log.warn("Failed to send DOSSIER_ACCESSED to audit log: {}", e.getMessage());
         }
     }
+
+    @Override
+    public void sendPhiAccessed(String resourceType, String resourceId, String action) {
+        Map<String, Object> payload = Map.of(
+                "eventType", "PHI_ACCESS",
+                "timestamp", Instant.now().toString(),
+                "resourceType", resourceType != null ? resourceType : "",
+                "resourceId", resourceId != null ? resourceId : "",
+                "action", action != null ? action : "READ"
+        );
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            restTemplate.postForObject(auditUrl, new HttpEntity<>(payload, headers), Void.class);
+        } catch (Exception e) {
+            log.warn("Failed to send PHI_ACCESS to audit log: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void sendRetentionPurgeCompleted(long purgedCount) {
+        Map<String, Object> payload = Map.of(
+                "eventType", "RETENTION_PURGE",
+                "timestamp", Instant.now().toString(),
+                "resourceType", "PATIENT",
+                "purgedCount", purgedCount
+        );
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            restTemplate.postForObject(auditUrl, new HttpEntity<>(payload, headers), Void.class);
+        } catch (Exception e) {
+            log.warn("Failed to send RETENTION_PURGE to audit log: {}", e.getMessage());
+        }
+    }
 }

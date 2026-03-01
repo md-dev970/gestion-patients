@@ -62,6 +62,13 @@ management:
     health:
       show-details: always
 
+# T1.17 / T1.18: Retention policy and scheduled purge.
+retention:
+  patient-years: ${RETENTION_PATIENT_YEARS:10}
+  purge:
+    enabled: ${RETENTION_PURGE_ENABLED:false}
+    cron: ${RETENTION_PURGE_CRON:0 0 2 * * ?}
+
 # Optional: set to audit log endpoint to send PHI_DELETED events (T6.3)
 # security:
 #   audit:

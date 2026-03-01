@@ -15,6 +15,7 @@ public interface AppointmentMapper {
     @Mapping(target = "notes", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "retentionUntil", ignore = true)
     Appointment toEntity(AppointmentCreateRequest request);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)

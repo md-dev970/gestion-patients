@@ -20,4 +20,11 @@ public class NoOpSecurityAuditSender implements SecurityAuditSender {
             log.debug("PHI_DELETED (no-op audit): resourceType={}, resourceId={}", resourceType, resourceId);
         }
     }
+
+    @Override
+    public void sendPhiAccessed(String resourceType, String resourceId, String action) {
+        if (log.isDebugEnabled()) {
+            log.debug("PHI_ACCESS (no-op audit): resourceType={}, resourceId={}, action={}", resourceType, resourceId, action);
+        }
+    }
 }

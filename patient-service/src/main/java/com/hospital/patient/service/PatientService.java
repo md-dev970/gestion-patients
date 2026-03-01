@@ -102,5 +102,14 @@ public interface PatientService {
      * @return Aggregated dossier for the patient
      */
     PatientDossierDTO getPatientDossier(Long id);
+
+    /**
+     * T1.19: Withdraws consent for data processing for the patient.
+     * Sets consentGiven to false and legalBasis to "withdrawn". No PII in logs.
+     *
+     * @param id The patient ID
+     * @return The updated patient DTO
+     */
+    PatientDTO withdrawConsent(Long id);
 }
 

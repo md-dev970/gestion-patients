@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-02-25T23:45:26+0000",
+    date = "2026-03-01T14:30:31+0000",
     comments = "version: 1.5.5.Final, compiler: javac, environment: Java 17.0.18 (OpenLogic)"
 )
 @Component
@@ -34,6 +34,8 @@ public class PatientMapperImpl implements PatientMapper {
         patientDTO.bloodType( patient.getBloodType() );
         patientDTO.emergencyContactName( patient.getEmergencyContactName() );
         patientDTO.emergencyContactPhone( patient.getEmergencyContactPhone() );
+        patientDTO.consentGiven( patient.isConsentGiven() );
+        patientDTO.legalBasis( patient.getLegalBasis() );
 
         return patientDTO.build();
     }
@@ -57,6 +59,10 @@ public class PatientMapperImpl implements PatientMapper {
         patient.bloodType( dto.getBloodType() );
         patient.emergencyContactName( dto.getEmergencyContactName() );
         patient.emergencyContactPhone( dto.getEmergencyContactPhone() );
+        if ( dto.getConsentGiven() != null ) {
+            patient.consentGiven( dto.getConsentGiven() );
+        }
+        patient.legalBasis( dto.getLegalBasis() );
 
         return patient.build();
     }
@@ -122,6 +128,12 @@ public class PatientMapperImpl implements PatientMapper {
         }
         if ( dto.getEmergencyContactPhone() != null ) {
             patient.setEmergencyContactPhone( dto.getEmergencyContactPhone() );
+        }
+        if ( dto.getConsentGiven() != null ) {
+            patient.setConsentGiven( dto.getConsentGiven() );
+        }
+        if ( dto.getLegalBasis() != null ) {
+            patient.setLegalBasis( dto.getLegalBasis() );
         }
     }
 }

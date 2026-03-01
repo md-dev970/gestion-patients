@@ -125,6 +125,25 @@ public class Patient {
     private LocalDateTime updatedAt;
 
     /**
+     * End of retention period (T1.17). Data may be purged after this date.
+     */
+    @Column(name = "retention_until")
+    private LocalDate retentionUntil;
+
+    /**
+     * T1.19: Whether the patient has given consent for data processing.
+     */
+    @Column(name = "consent_given", nullable = false)
+    @Builder.Default
+    private boolean consentGiven = true;
+
+    /**
+     * T1.19: Legal basis for processing (e.g. consent, legitimate interest).
+     */
+    @Column(name = "legal_basis", length = 100)
+    private String legalBasis;
+
+    /**
      * Automatically sets timestamps before persisting.
      */
     @PrePersist

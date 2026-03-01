@@ -74,6 +74,41 @@ Implementations are fire-and-forget; failures to send are logged and do not affe
 
 ---
 
+## PHI_ACCESS (T1.14)
+
+Emitted by PHI services after a **successful** READ, CREATE or UPDATE of protected health information. No PII/PHI is included in the payload.
+
+| Field          | Type   | Description |
+|----------------|--------|-------------|
+| `eventType`    | string | Always `"PHI_ACCESS"` |
+| `timestamp`    | string | ISO-8601 instant |
+| `resourceType` | string | One of: `PATIENT`, `MEDICAL_RECORD`, `CONSULTATION`, `APPOINTMENT` |
+| `resourceId`   | string | Identifier of the resource (no PII). |
+| `action`       | string | `"READ"`, `"CREATE"` or `"UPDATE"` |
+
+**Example payload:**
+
+```json
+{
+  "eventType": "PHI_ACCESS",
+  "timestamp": "2025-02-17T10:40:00.000Z",
+  "resourceType": "PATIENT",
+  "resourceId": "42",
+  "action": "READ"
+}
+```
+
+**When it is sent:**
+
+- **patient-service:** After create (CREATE), getById/getByNationalId (READ), update (UPDATE).
+- **medical-record-service:** After create (CREATE), getById/getByPatientId (READ), update (UPDATE).
+- **consultations-service:** After create (CREATE), getById (READ), update (UPDATE).
+- **appointment-service:** After create (CREATE), getById (READ), update (UPDATE).
+
+Implementations are fire-and-forget; failures to send are logged and do not affect the HTTP response.
+
+---
+
 ## PATIENT_SELF_DELETION_REQUESTED (T6.11)
 
 Emitted by the **gateway** when a user with **ROLE_PATIENT** is **allowed** to DELETE their own patient record (`DELETE /api/patients/{id}` where id = user id). Lets the audit log distinguish patient-initiated deletion (right to erasure) from admin-initiated deletion. No PII in the payload.
@@ -86,6 +121,21 @@ Emitted by the **gateway** when a user with **ROLE_PATIENT** is **allowed** to D
 | `resourceId`   | string | Patient ID from the path (no PII). |
 
 **When it is sent:** Immediately when the gateway allows the request (before proxying to patient-service). Not sent when the requester is ADMIN or when the request is denied (e.g. PATIENT trying to delete another patient).
+
+---
+
+## RETENTION_PURGE (T1.18)
+
+Emitted by **patient-service** after a scheduled retention purge run. No PII in the payload.
+
+| Field          | Type   | Description |
+|----------------|--------|-------------|
+| `eventType`    | string | Always `"RETENTION_PURGE"` |
+| `timestamp`    | string | ISO-8601 instant |
+| `resourceType` | string | Always `"PATIENT"` |
+| `purgedCount`  | number | Number of patient records purged |
+
+**When it is sent:** After `RetentionPurgeJob` completes (when `retention.purge.enabled` is true). One event per run with the count of successfully purged patients.
 
 ---
 

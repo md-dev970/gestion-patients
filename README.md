@@ -115,6 +115,41 @@ docker-compose logs -f
 docker-compose down
 ```
 
+### Option 3: Docker Compose with HTTPS (local testing)
+
+To run the stack with **HTTPS** on the gateway (port 8080), use the TLS override. You need a dev keystore first.
+
+**1. Keystore (one of these):**
+
+- **If you already have `gateway-dev.p12` in the project root** – it will be used automatically.
+- **Otherwise, generate one** (from project root):
+
+  **Windows (PowerShell):**
+  ```powershell
+  cd gateway-service; .\scripts\generate-dev-keystore.bat; cd ..
+  ```
+  Then in `docker-compose.tls.yml` change the gateway volume to:  
+  `- ./gateway-service/build:/app/keystore:ro`
+
+  **Linux/macOS:**
+  ```bash
+  cd gateway-service && ./scripts/generate-dev-keystore.sh && cd ..
+  ```
+
+**2. Start the stack with HTTPS:**
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build
+```
+
+**3. Verify HTTPS:**
+
+- Browser: open **https://localhost:8080/actuator/health** (accept the self-signed certificate warning).
+- PowerShell: `Invoke-WebRequest -Uri https://localhost:8080/actuator/health -SkipCertificateCheck`
+- curl: `curl -k https://localhost:8080/actuator/health`
+
+All API calls go through **https://localhost:8080** (e.g. `https://localhost:8080/api/auth/login`, `https://localhost:8080/api/patients`).
+
 ## 🧪 Tests
 
 ### Exécuter les tests localement

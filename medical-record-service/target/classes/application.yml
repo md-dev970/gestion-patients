@@ -46,6 +46,10 @@ management:
       exposure:
         include: health,info,metrics
 
+# T1.17: Retention policy (years)
+retention:
+  medical-record-years: ${RETENTION_MEDICAL_RECORD_YEARS:10}
+
 # Optional: set to audit log endpoint to send PHI_DELETED events (T6.3)
 # security:
 #   audit:

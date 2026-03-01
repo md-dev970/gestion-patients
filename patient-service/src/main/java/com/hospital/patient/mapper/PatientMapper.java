@@ -37,6 +37,7 @@ public interface PatientMapper {
     @Mapping(target = "id", ignore = true)           // ID is auto-generated
     @Mapping(target = "createdAt", ignore = true)    // Set by @PrePersist
     @Mapping(target = "updatedAt", ignore = true)    // Set by @PrePersist/@PreUpdate
+    @Mapping(target = "retentionUntil", ignore = true)
     Patient toEntity(PatientDTO dto);
 
     /**
@@ -46,6 +47,9 @@ public interface PatientMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "retentionUntil", ignore = true)
+    @Mapping(target = "consentGiven", ignore = true)
+    @Mapping(target = "legalBasis", ignore = true)
     Patient toEntity(PatientCreateRequest request);
 
     /**
@@ -58,6 +62,7 @@ public interface PatientMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "retentionUntil", ignore = true)
     void updateEntityFromDTO(PatientDTO dto, @MappingTarget Patient patient);
 }
 

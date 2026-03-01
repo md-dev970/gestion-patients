@@ -19,10 +19,12 @@ D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\service\PatientService.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\client\MedicalRecordClientFallback.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\dto\AppointmentSummaryDTO.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\job\RetentionPurgeJob.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\audit\SecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\client\AppointmentClient.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\dto\PatientDTO.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\dto\MedicalRecordSummaryDTO.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\exception\DuplicatePatientException.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\exception\GlobalExceptionHandler.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\config\RetentionProperties.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\patient-service\src\main\java\com\hospital\patient\dto\PatientCreateRequest.java

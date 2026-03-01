@@ -393,6 +393,51 @@ class AuthServiceImplTest {
         assertThat(result).isFalse();
         verify(jwtService).validateToken(accessToken);
     }
+
+    @Test
+    @DisplayName("anonymizeAccount - user found - anonymizes and disables")
+    void anonymizeAccount_userFound_anonymizesAndDisables() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(passwordEncoder.encode(any())).thenReturn("random-hash");
+
+        authService.anonymizeAccount(1L);
+
+        verify(userRepository).save(argThat(u ->
+                u.getUsername().startsWith("anonymized-") && u.getEmail().contains("@anonymized.local")
+                        && !u.isEnabled() && !u.isAccountNonLocked()));
+    }
+
+    @Test
+    @DisplayName("anonymizeAccount - user not found - throws")
+    void anonymizeAccount_userNotFound_throws() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.anonymizeAccount(99L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("User not found");
+    }
+
+    @Test
+    @DisplayName("deleteAccount - user exists - deletes")
+    void deleteAccount_userExists_deletes() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+        doNothing().when(userRepository).deleteById(1L);
+
+        authService.deleteAccount(1L);
+
+        verify(userRepository).deleteById(1L);
+    }
+
+    @Test
+    @DisplayName("deleteAccount - user not found - throws")
+    void deleteAccount_userNotFound_throws() {
+        when(userRepository.existsById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.deleteAccount(99L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("User not found");
+    }
 }
 
 

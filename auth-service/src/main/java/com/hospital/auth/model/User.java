@@ -64,6 +64,12 @@ public class User {
     private Long staffId;
 
     /**
+     * T1.20: Optional link to patient (for ROLE_PATIENT). Used when patient-service triggers account anonymization.
+     */
+    @Column(name = "patient_id")
+    private Long patientId;
+
+    /**
      * User roles for authorization.
      * // Permissions will be checked in Subject 2
      */

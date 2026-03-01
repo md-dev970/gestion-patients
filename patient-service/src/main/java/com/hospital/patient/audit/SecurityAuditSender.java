@@ -23,4 +23,21 @@ public interface SecurityAuditSender {
      * @param action     "READ" for GET dossier, "EXPORT" for GET dossier/export
      */
     void sendDossierAccessed(String resourceId, String action);
+
+    /**
+     * Sends a PHI_ACCESS event after successful READ, CREATE or UPDATE of PHI (T1.14).
+     * No PII in the payload.
+     *
+     * @param resourceType e.g. PATIENT, MEDICAL_RECORD
+     * @param resourceId   identifier of the resource (no PII)
+     * @param action       READ, CREATE or UPDATE
+     */
+    void sendPhiAccessed(String resourceType, String resourceId, String action);
+
+    /**
+     * Sends a RETENTION_PURGE event after a scheduled purge run (T1.18).
+     *
+     * @param purgedCount number of patient records purged (no PII)
+     */
+    void sendRetentionPurgeCompleted(long purgedCount);
 }

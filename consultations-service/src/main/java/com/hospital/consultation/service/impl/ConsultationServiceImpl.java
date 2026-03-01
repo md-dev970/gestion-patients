@@ -12,9 +12,11 @@ import com.hospital.consultation.repository.ConsultationRepository;
 import com.hospital.consultation.service.ConsultationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -38,20 +40,23 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final ConsultationMapper consultationMapper;
     private final SecurityAuditSender securityAuditSender;
 
+    @Value("${retention.consultation-years:10}")
+    private int retentionYears;
+
     @Override
     public ConsultationDTO createConsultation(ConsultationCreateRequest request) {
         log.info("Creating consultation for patient ID: {}", request.getPatientId());
 
         Consultation consultation = consultationMapper.toEntity(request);
         consultation.setStatus(ConsultationStatus.SCHEDULED);
-        
+        consultation.setRetentionUntil(LocalDate.now().plusYears(retentionYears));
         if (request.getConsultationDate() == null) {
             consultation.setConsultationDate(LocalDateTime.now());
         }
 
         Consultation savedConsultation = consultationRepository.save(consultation);
         log.info("Consultation created with ID: {}", savedConsultation.getConsultationId());
-
+        securityAuditSender.sendPhiAccessed("CONSULTATION", savedConsultation.getConsultationId().toString(), "CREATE");
         return consultationMapper.toDTO(savedConsultation);
     }
 
@@ -63,7 +68,7 @@ public class ConsultationServiceImpl implements ConsultationService {
         Consultation consultation = consultationRepository.findById(consultationId)
                 .orElseThrow(() -> new ConsultationNotFoundException(
                         "Consultation not found with ID: " + consultationId));
-        
+        securityAuditSender.sendPhiAccessed("CONSULTATION", consultationId.toString(), "READ");
         return consultationMapper.toDTO(consultation);
     }
 
@@ -90,7 +95,7 @@ public class ConsultationServiceImpl implements ConsultationService {
         
         Consultation updatedConsultation = consultationRepository.save(consultation);
         log.info("Consultation updated successfully: {}", consultationId);
-
+        securityAuditSender.sendPhiAccessed("CONSULTATION", consultationId.toString(), "UPDATE");
         return consultationMapper.toDTO(updatedConsultation);
     }
 

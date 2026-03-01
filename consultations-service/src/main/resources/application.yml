@@ -40,6 +40,10 @@ management:
       exposure:
         include: health,info
 
+# T1.17: Retention policy (years)
+retention:
+  consultation-years: ${RETENTION_CONSULTATION_YEARS:10}
+
 # Optional: set to audit log endpoint to send PHI_DELETED events (T6.3)
 # security:
 #   audit:

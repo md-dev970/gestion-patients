@@ -39,5 +39,19 @@ public interface AuthService {
      * // Security will be reinforced in Subject 3
      */
     boolean validateToken(String token);
+
+    /**
+     * T1.20: Anonymizes an account. Sets username/email to anonymized values, disables account. No PII in logs.
+     *
+     * @param userId The user ID (log only this, no PII)
+     */
+    void anonymizeAccount(Long userId);
+
+    /**
+     * T1.20: Deletes an account. Use when no external references (e.g. staff_id) must be preserved.
+     *
+     * @param userId The user ID
+     */
+    void deleteAccount(Long userId);
 }
 

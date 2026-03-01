@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -96,6 +97,10 @@ public class Consultation {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /** T1.17: End of retention period. Data may be purged after this date. */
+    @Column(name = "retention_until")
+    private LocalDate retentionUntil;
 
     @PrePersist
     protected void onCreate() {

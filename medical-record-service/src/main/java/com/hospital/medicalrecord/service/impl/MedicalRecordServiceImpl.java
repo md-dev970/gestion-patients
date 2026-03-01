@@ -13,9 +13,11 @@ import com.hospital.medicalrecord.repository.MedicalRecordRepository;
 import com.hospital.medicalrecord.service.MedicalRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 /**
@@ -42,6 +44,9 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     private final MedicalEntryMapper entryMapper;
     private final SecurityAuditSender securityAuditSender;
 
+    @Value("${retention.medical-record-years:10}")
+    private int retentionYears;
+
     @Override
     public MedicalRecordDTO createMedicalRecord(Long patientId) {
         log.info("Creating medical record for patient: {}", patientId);
@@ -51,11 +56,12 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         
         MedicalRecord record = MedicalRecord.builder()
                 .patientId(patientId)
+                .retentionUntil(LocalDate.now().plusYears(retentionYears))
                 .build();
 
         MedicalRecord saved = recordRepository.save(record);
         log.info("Medical record created with ID: {}", saved.getId());
-
+        securityAuditSender.sendPhiAccessed("MEDICAL_RECORD", String.valueOf(saved.getId()), "CREATE");
         return recordMapper.toDTO(saved);
     }
 
@@ -63,18 +69,20 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     @Transactional(readOnly = true)
     public Optional<MedicalRecordDTO> getMedicalRecordById(Long id) {
         log.debug("Fetching medical record by ID: {}", id);
-        // // Security will be reinforced in Subject 3
-        return recordRepository.findById(id)
+        Optional<MedicalRecordDTO> result = recordRepository.findById(id)
                 .map(recordMapper::toDTO);
+        result.ifPresent(dto -> securityAuditSender.sendPhiAccessed("MEDICAL_RECORD", String.valueOf(dto.getId()), "READ"));
+        return result;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<MedicalRecordDTO> getMedicalRecordByPatientId(Long patientId) {
         log.debug("Fetching medical record for patient: {}", patientId);
-        // // Permissions will be checked in Subject 2
-        return recordRepository.findByPatientId(patientId)
+        Optional<MedicalRecordDTO> result = recordRepository.findByPatientId(patientId)
                 .map(recordMapper::toDTO);
+        result.ifPresent(dto -> securityAuditSender.sendPhiAccessed("MEDICAL_RECORD", String.valueOf(dto.getId()), "READ"));
+        return result;
     }
 
     @Override
@@ -87,7 +95,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
 
         recordMapper.updateEntityFromDTO(recordDTO, existing);
         MedicalRecord updated = recordRepository.save(existing);
-
+        securityAuditSender.sendPhiAccessed("MEDICAL_RECORD", String.valueOf(id), "UPDATE");
         return recordMapper.toDTO(updated);
     }
 

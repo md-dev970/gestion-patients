@@ -223,5 +223,18 @@ public class PatientController {
         boolean exists = patientService.existsById(id);
         return ResponseEntity.ok(exists);
     }
+
+    /**
+     * T1.19: Withdraw consent for data processing. No PII in logs.
+     *
+     * @param id The patient ID
+     * @return Updated patient (consentGiven=false, legalBasis=withdrawn)
+     */
+    @PutMapping("/{id}/consent/withdraw")
+    public ResponseEntity<PatientDTO> withdrawConsent(@PathVariable Long id) {
+        log.info("REST request to withdraw consent for patient id: {}", id);
+        PatientDTO updated = patientService.withdrawConsent(id);
+        return ResponseEntity.ok(updated);
+    }
 }
 

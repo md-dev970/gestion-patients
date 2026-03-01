@@ -14,6 +14,7 @@ import com.hospital.patient.exception.PatientNotFoundException;
 import com.hospital.patient.mapper.PatientMapper;
 import com.hospital.patient.model.Patient;
 import com.hospital.patient.audit.SecurityAuditSender;
+import com.hospital.patient.config.RetentionProperties;
 import com.hospital.patient.repository.PatientRepository;
 import com.hospital.patient.service.PatientService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -52,6 +54,7 @@ public class PatientServiceImpl implements PatientService {
     private final ConsultationClient consultationClient;
     private final AppointmentClient appointmentClient;
     private final SecurityAuditSender securityAuditSender;
+    private final RetentionProperties retentionProperties;
 
     @Override
     public PatientDTO createPatient(PatientCreateRequest request) {
@@ -66,11 +69,12 @@ public class PatientServiceImpl implements PatientService {
 
         // Map DTO to entity
         Patient patient = patientMapper.toEntity(request);
+        patient.setRetentionUntil(LocalDate.now().plusYears(retentionProperties.getPatientYears()));
 
         // Save and return
         Patient savedPatient = patientRepository.save(patient);
         log.info("Patient created with ID: {}", savedPatient.getId());
-
+        securityAuditSender.sendPhiAccessed("PATIENT", String.valueOf(savedPatient.getId()), "CREATE");
         return patientMapper.toDTO(savedPatient);
     }
 
@@ -79,16 +83,20 @@ public class PatientServiceImpl implements PatientService {
     public Optional<PatientDTO> getPatientById(Long id) {
         log.debug("Fetching patient by ID: {}", id);
         // Permissions will be checked in Subject 2
-        return patientRepository.findById(id)
+        Optional<PatientDTO> result = patientRepository.findById(id)
                 .map(patientMapper::toDTO);
+        result.ifPresent(dto -> securityAuditSender.sendPhiAccessed("PATIENT", String.valueOf(dto.getId()), "READ"));
+        return result;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<PatientDTO> getPatientByNationalId(String nationalId) {
-        log.debug("Fetching patient by national ID: {}", nationalId);
-        return patientRepository.findByNationalId(nationalId)
+        log.debug("Fetching patient by national ID");
+        Optional<PatientDTO> result = patientRepository.findByNationalId(nationalId)
                 .map(patientMapper::toDTO);
+        result.ifPresent(dto -> securityAuditSender.sendPhiAccessed("PATIENT", String.valueOf(dto.getId()), "READ"));
+        return result;
     }
 
     @Override
@@ -127,7 +135,7 @@ public class PatientServiceImpl implements PatientService {
 
         Patient updatedPatient = patientRepository.save(existingPatient);
         log.info("Patient updated successfully: {}", id);
-
+        securityAuditSender.sendPhiAccessed("PATIENT", String.valueOf(id), "UPDATE");
         return patientMapper.toDTO(updatedPatient);
     }
 
@@ -181,6 +189,18 @@ public class PatientServiceImpl implements PatientService {
                 .consultations(consultations)
                 .appointments(appointments)
                 .build();
+    }
+
+    @Override
+    public PatientDTO withdrawConsent(Long id) {
+        log.info("Consent withdrawal requested for patient id: {}", id);
+        Patient patient = patientRepository.findById(id)
+                .orElseThrow(() -> new PatientNotFoundException("Patient not found with ID: " + id));
+        patient.setConsentGiven(false);
+        patient.setLegalBasis("withdrawn");
+        Patient updated = patientRepository.save(patient);
+        securityAuditSender.sendPhiAccessed("PATIENT", String.valueOf(id), "UPDATE");
+        return patientMapper.toDTO(updated);
     }
 }
 

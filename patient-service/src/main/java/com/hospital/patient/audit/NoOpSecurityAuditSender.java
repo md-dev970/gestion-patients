@@ -27,4 +27,18 @@ public class NoOpSecurityAuditSender implements SecurityAuditSender {
             log.debug("DOSSIER_ACCESSED (no-op audit): resourceId={}, action={}", resourceId, action);
         }
     }
+
+    @Override
+    public void sendPhiAccessed(String resourceType, String resourceId, String action) {
+        if (log.isDebugEnabled()) {
+            log.debug("PHI_ACCESS (no-op audit): resourceType={}, resourceId={}, action={}", resourceType, resourceId, action);
+        }
+    }
+
+    @Override
+    public void sendRetentionPurgeCompleted(long purgedCount) {
+        if (log.isDebugEnabled()) {
+            log.debug("RETENTION_PURGE (no-op audit): purgedCount={}", purgedCount);
+        }
+    }
 }

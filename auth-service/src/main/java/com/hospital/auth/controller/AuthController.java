@@ -78,5 +78,25 @@ public class AuthController {
         boolean isValid = authService.validateToken(token);
         return ResponseEntity.ok(isValid);
     }
+
+    /**
+     * T1.20: Anonymize account. RBAC: ADMIN or own userId. No PII in logs.
+     */
+    @PutMapping("/account/{userId}/anonymize")
+    public ResponseEntity<Void> anonymizeAccount(@PathVariable Long userId) {
+        log.info("REST request to anonymize account for user id: {}", userId);
+        authService.anonymizeAccount(userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * T1.20: Delete account. RBAC: ADMIN. Use when no external references to user.
+     */
+    @DeleteMapping("/account/{userId}")
+    public ResponseEntity<Void> deleteAccount(@PathVariable Long userId) {
+        log.info("REST request to delete account for user id: {}", userId);
+        authService.deleteAccount(userId);
+        return ResponseEntity.noContent().build();
+    }
 }
 

@@ -62,5 +62,12 @@ public class PatientDTO {
     private String emergencyContactName;
 
     private String emergencyContactPhone;
+
+    /** T1.19: Whether consent for data processing has been given. */
+    private Boolean consentGiven;
+
+    /** T1.19: Legal basis for processing (e.g. consent, legitimate_interest). */
+    @Size(max = 100)
+    private String legalBasis;
 }
 

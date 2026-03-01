@@ -14,4 +14,13 @@ public interface SecurityAuditSender {
      * @param resourceId   identifier of the deleted resource (no PII)
      */
     void sendPhiDeleted(String resourceType, String resourceId);
+
+    /**
+     * Sends a PHI_ACCESS event after successful READ, CREATE or UPDATE of PHI (T1.14).
+     *
+     * @param resourceType e.g. MEDICAL_RECORD
+     * @param resourceId   identifier (no PII)
+     * @param action       READ, CREATE or UPDATE
+     */
+    void sendPhiAccessed(String resourceType, String resourceId, String action);
 }

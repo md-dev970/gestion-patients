@@ -14,6 +14,7 @@ import com.hospital.appointment.repository.AppointmentRepository;
 import com.hospital.appointment.service.AppointmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +50,9 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final StaffClient staffClient;
     private final SecurityAuditSender securityAuditSender;
 
+    @Value("${retention.appointment-years:10}")
+    private int retentionYears;
+
     @Override
     public AppointmentDTO createAppointment(AppointmentCreateRequest request) {
         log.info("Creating appointment for patient {} with doctor {}", 
@@ -69,10 +73,11 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         Appointment appointment = appointmentMapper.toEntity(request);
         appointment.setStatus(AppointmentStatus.SCHEDULED);
+        appointment.setRetentionUntil(LocalDate.now().plusYears(retentionYears));
 
         Appointment savedAppointment = appointmentRepository.save(appointment);
         log.info("Appointment created with ID: {}", savedAppointment.getId());
-
+        securityAuditSender.sendPhiAccessed("APPOINTMENT", String.valueOf(savedAppointment.getId()), "CREATE");
         return appointmentMapper.toDTO(savedAppointment);
     }
 
@@ -80,8 +85,10 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Transactional(readOnly = true)
     public Optional<AppointmentDTO> getAppointmentById(Long id) {
         log.debug("Fetching appointment by ID: {}", id);
-        return appointmentRepository.findById(id)
+        Optional<AppointmentDTO> result = appointmentRepository.findById(id)
                 .map(appointmentMapper::toDTO);
+        result.ifPresent(dto -> securityAuditSender.sendPhiAccessed("APPOINTMENT", String.valueOf(dto.getId()), "READ"));
+        return result;
     }
 
     @Override
@@ -127,7 +134,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         appointmentMapper.updateEntityFromDTO(appointmentDTO, existingAppointment);
         Appointment updatedAppointment = appointmentRepository.save(existingAppointment);
-
+        securityAuditSender.sendPhiAccessed("APPOINTMENT", String.valueOf(id), "UPDATE");
         return appointmentMapper.toDTO(updatedAppointment);
     }
 

@@ -1,5 +1,7 @@
 # Optional override to run the gateway with HTTPS (T1.2).
-# Prerequisite: generate a dev keystore: cd gateway-service && ./scripts/generate-dev-keystore.sh
+# Prerequisite: have a dev keystore in one of these places:
+#   - Project root: gateway-dev.p12  (used by the volume below)
+#   - Or generate:  cd gateway-service && scripts\generate-dev-keystore.bat  then use build volume instead
 # Then: docker-compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build
 # Verify: curl -k https://localhost:8080/actuator/health
 
@@ -9,11 +11,12 @@ services:
       - SPRING_PROFILES_ACTIVE=docker,tls
       - SERVER_SSL_ENABLED=true
       - SERVER_SSL_KEY_STORE=/app/keystore/gateway-dev.p12
-      - SERVER_SSL_KEY_STORE_PASSWORD=changeit
+      - SERVER_SSL_KEY_STORE_PASSWORD=password
       - SERVER_SSL_KEY_STORE_TYPE=PKCS12
       - SERVER_SSL_KEY_ALIAS=gateway
     volumes:
-      - ./gateway-service/build:/app/keystore:ro
+      # Use keystore from project root (or replace with ./gateway-service/build:/app/keystore:ro if you ran generate-dev-keystore)
+      - ./gateway-dev.p12:/app/keystore/gateway-dev.p12:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "--no-check-certificate", "--spider", "https://localhost:8080/actuator/health"]
       interval: 30s

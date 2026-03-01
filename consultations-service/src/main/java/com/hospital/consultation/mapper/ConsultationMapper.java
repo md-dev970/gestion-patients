@@ -33,6 +33,7 @@ public interface ConsultationMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "retentionUntil", ignore = true)
     Consultation toEntity(ConsultationCreateRequest request);
 
     /**

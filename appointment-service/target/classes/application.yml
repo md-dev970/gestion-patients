@@ -47,6 +47,10 @@ management:
       exposure:
         include: health,info,metrics
 
+# T1.17: Retention policy (years)
+retention:
+  appointment-years: ${RETENTION_APPOINTMENT_YEARS:10}
+
 # Optional: set to audit log endpoint to send PHI_DELETED events (T6.3)
 # security:
 #   audit:

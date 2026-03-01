@@ -14,6 +14,7 @@ import com.hospital.patient.exception.PatientNotFoundException;
 import com.hospital.patient.mapper.PatientMapper;
 import com.hospital.patient.model.Patient;
 import com.hospital.patient.audit.SecurityAuditSender;
+import com.hospital.patient.config.RetentionProperties;
 import com.hospital.patient.repository.PatientRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PatientServiceImpl Unit Tests")
@@ -56,6 +58,9 @@ class PatientServiceImplTest {
     @Mock
     private SecurityAuditSender securityAuditSender;
 
+    @Mock
+    private RetentionProperties retentionProperties;
+
     @InjectMocks
     private PatientServiceImpl patientService;
 
@@ -65,6 +70,7 @@ class PatientServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(retentionProperties.getPatientYears()).thenReturn(10);
         createRequest = PatientCreateRequest.builder()
                 .firstName("John")
                 .lastName("Doe")
@@ -118,6 +124,22 @@ class PatientServiceImplTest {
         verify(patientMapper).toEntity(createRequest);
         verify(patientRepository).save(patient);
         verify(patientMapper).toDTO(patient);
+        verify(securityAuditSender).sendPhiAccessed("PATIENT", "1", "CREATE");
+    }
+
+    @Test
+    @DisplayName("createPatient - sets retentionUntil from config")
+    void createPatient_setsRetentionUntil() {
+        when(patientRepository.existsByNationalId("AB123456")).thenReturn(false);
+        when(patientMapper.toEntity(createRequest)).thenReturn(patient);
+        when(patientRepository.save(any(Patient.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(patientMapper.toDTO(any(Patient.class))).thenReturn(patientDTO);
+        when(retentionProperties.getPatientYears()).thenReturn(10);
+
+        patientService.createPatient(createRequest);
+
+        verify(patientRepository).save(argThat(p -> p.getRetentionUntil() != null
+                && p.getRetentionUntil().equals(LocalDate.now().plusYears(10))));
     }
 
     @Test
@@ -149,6 +171,7 @@ class PatientServiceImplTest {
         assertThat(result.get().getId()).isEqualTo(1L);
         verify(patientRepository).findById(1L);
         verify(patientMapper).toDTO(patient);
+        verify(securityAuditSender).sendPhiAccessed("PATIENT", "1", "READ");
     }
 
     @Test
@@ -287,6 +310,7 @@ class PatientServiceImplTest {
         verify(patientMapper).updateEntityFromDTO(updateDTO, patient);
         verify(patientRepository).save(patient);
         verify(patientMapper).toDTO(patient);
+        verify(securityAuditSender).sendPhiAccessed("PATIENT", "1", "UPDATE");
     }
 
     @Test
@@ -431,6 +455,30 @@ class PatientServiceImplTest {
         // Then
         assertThat(result).isFalse();
         verify(patientRepository).existsById(1L);
+    }
+
+    @Test
+    @DisplayName("withdrawConsent - patient found - sets consentGiven false and sends PHI_ACCESS")
+    void withdrawConsent_patientFound_updatesAndSendsPhiAccessed() {
+        when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
+        when(patientRepository.save(any(Patient.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(patientMapper.toDTO(any(Patient.class))).thenReturn(patientDTO);
+
+        PatientDTO result = patientService.withdrawConsent(1L);
+
+        assertThat(result).isNotNull();
+        verify(patientRepository).save(argThat(p -> !p.isConsentGiven() && "withdrawn".equals(p.getLegalBasis())));
+        verify(securityAuditSender).sendPhiAccessed("PATIENT", "1", "UPDATE");
+    }
+
+    @Test
+    @DisplayName("withdrawConsent - patient not found - throws PatientNotFoundException")
+    void withdrawConsent_patientNotFound_throws() {
+        when(patientRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> patientService.withdrawConsent(1L))
+                .isInstanceOf(PatientNotFoundException.class);
+        verify(securityAuditSender, never()).sendPhiAccessed(any(), any(), any());
     }
 }
 
