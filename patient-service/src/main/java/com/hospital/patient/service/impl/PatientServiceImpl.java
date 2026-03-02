@@ -58,7 +58,7 @@ public class PatientServiceImpl implements PatientService {
 
     @Override
     public PatientDTO createPatient(PatientCreateRequest request) {
-        log.info("Creating new patient with national ID: {}", request.getNationalId());
+        log.info("Creating new patient");
 
         // Check for duplicate national ID
         // // Business logic will be added in the specialized subject
@@ -70,6 +70,10 @@ public class PatientServiceImpl implements PatientService {
         // Map DTO to entity
         Patient patient = patientMapper.toEntity(request);
         patient.setRetentionUntil(LocalDate.now().plusYears(retentionProperties.getPatientYears()));
+        // T2.3: Default legal basis for RGPD compliance when not provided
+        if (patient.getLegalBasis() == null || patient.getLegalBasis().isBlank()) {
+            patient.setLegalBasis("consent");
+        }
 
         // Save and return
         Patient savedPatient = patientRepository.save(patient);
@@ -183,6 +187,7 @@ public class PatientServiceImpl implements PatientService {
         java.util.List<AppointmentSummaryDTO> appointments =
                 appointmentClient.getAppointmentsByPatientId(id);
 
+        securityAuditSender.sendPhiAccessed("PATIENT_DOSSIER", String.valueOf(id), "READ");
         return PatientDossierDTO.builder()
                 .patient(patient)
                 .medicalRecord(medicalRecord)

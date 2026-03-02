@@ -141,7 +141,7 @@ public class PatientController {
      */
     @GetMapping("/national-id/{nationalId}")
     public ResponseEntity<PatientDTO> getPatientByNationalId(@PathVariable String nationalId) {
-        log.info("REST request to get patient by national ID: {}", nationalId);
+        log.info("REST request to get patient by national ID");
         // Security will be reinforced in Subject 3
         return patientService.getPatientByNationalId(nationalId)
                 .map(ResponseEntity::ok)
@@ -157,7 +157,7 @@ public class PatientController {
      */
     @GetMapping("/search")
     public ResponseEntity<List<PatientDTO>> searchPatients(@RequestParam String query) {
-        log.info("REST request to search patients with query: {}", query);
+        log.info("REST request to search patients");
         List<PatientDTO> patients = patientService.searchPatients(query);
         return ResponseEntity.ok(patients);
     }

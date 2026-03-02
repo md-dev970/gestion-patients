@@ -55,7 +55,7 @@ public class BruteforceByIpFilter implements GlobalFilter, Ordered {
         return chain.filter(exchange)
                 .doOnSuccess(v -> {
                     var statusCode = exchange.getResponse().getStatusCode();
-                    if (statusCode != null && (statusCode.value() == 401 || statusCode.value() == 423)) {
+                    if (statusCode != null && (statusCode.value() == 401 || statusCode.value() == 403 || statusCode.value() == 423)) {
                         boolean justBlocked = bruteforceByIpStore.recordFailure(clientIp);
                         if (justBlocked) {
                             long windowSeconds = properties.getLockoutDurationMinutes() * 60L;

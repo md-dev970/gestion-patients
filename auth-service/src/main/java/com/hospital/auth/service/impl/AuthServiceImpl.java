@@ -6,6 +6,7 @@ import com.hospital.auth.dto.AuthResponse;
 import com.hospital.auth.dto.LoginRequest;
 import com.hospital.auth.dto.RegisterRequest;
 import com.hospital.auth.exception.AccountTemporarilyLockedException;
+import com.hospital.auth.exception.InvalidCredentialsException;
 import com.hospital.auth.model.Role;
 import com.hospital.auth.model.User;
 import com.hospital.auth.repository.UserRepository;
@@ -46,7 +47,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse register(RegisterRequest request) {
-        log.info("Registering new user: {}", request.getUsername());
+        log.info("Registering new user");
 
         // Vérification des doublons
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -100,7 +101,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        log.info("Login attempt for user: {}", request.getUsername());
+        log.info("Login attempt");
 
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -124,7 +125,7 @@ public class AuthServiceImpl implements AuthService {
 
         // Check password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            log.warn("Invalid password for user: {}", request.getUsername());
+            log.warn("Invalid password for user id: {}", user.getId());
             int attempts = user.getFailedAttempts() + 1;
             user.setFailedAttempts(attempts);
             int maxAttempts = bruteforceProperties.getMaxFailedAttempts();
@@ -138,7 +139,7 @@ public class AuthServiceImpl implements AuthService {
                 throw new AccountTemporarilyLockedException("Account temporarily locked");
             }
             userRepository.save(user);
-            throw new RuntimeException("Invalid credentials");
+            throw new InvalidCredentialsException();
         }
 
         // Success: reset failed attempts and lock
@@ -150,7 +151,7 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        log.info("User {} logged in successfully", request.getUsername());
+        log.info("User id {} logged in successfully", user.getId());
 
         return AuthResponse.builder()
                 .accessToken(accessToken)

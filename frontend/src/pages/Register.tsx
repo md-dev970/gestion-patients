@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
+  Checkbox,
   Container,
   Field,
   Heading,
@@ -20,6 +21,7 @@ export function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("ROLE_PATIENT");
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +38,10 @@ export function Register() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!consent) {
+      setError("You must accept the Terms and Conditions and Privacy Policy to register.");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
@@ -103,6 +109,26 @@ export function Register() {
                 minLength={8}
                 autoComplete="new-password"
               />
+            </Field.Root>
+            <Field.Root>
+              <Checkbox.Root
+                checked={consent}
+                onCheckedChange={(e) => setConsent(e.checked === true)}
+                required
+              >
+                <Checkbox.HiddenInput />
+                <Checkbox.Control />
+                <Checkbox.Label>
+                  I agree to the{" "}
+                  <Link to="/terms" style={{ textDecoration: "underline", fontWeight: 500 }}>
+                    Terms and Conditions
+                  </Link>{" "}
+                  and{" "}
+                  <Link to="/privacy" style={{ textDecoration: "underline", fontWeight: 500 }}>
+                    Privacy Policy
+                  </Link>
+                </Checkbox.Label>
+              </Checkbox.Root>
             </Field.Root>
             <Field.Root>
               <Field.Label>Role</Field.Label>

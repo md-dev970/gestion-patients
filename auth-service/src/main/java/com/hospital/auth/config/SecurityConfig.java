@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -37,31 +38,24 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Skip Spring Security entirely for these paths – no filters run, so no 403 possible from security.
+     */
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return web -> web.ignoring()
+                .requestMatchers("/api/auth/**", "/register", "/login", "/refresh")
+                .requestMatchers("/actuator/**")
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html");
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> 
+            .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            
-            .authorizeHttpRequests(auth -> auth
-                // 1. SWAGGER UI WHITELIST (Added this block)
-                .requestMatchers(
-                    "/v3/api-docs/**",
-                    "/swagger-ui/**",
-                    "/swagger-ui.html"
-                ).permitAll()
-
-                // 2. Public Auth Endpoints
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
-                
-                // 3. All other requests need authentication
-                .anyRequest().authenticated()
-            );
-
-                    // TODO: Add JWT authentication filter in Subject 3
-        // http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
 
         return http.build();
     }

@@ -40,7 +40,7 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        log.info("REST request to register user: {}", request.getUsername());
+        log.info("REST request to register user");
         AuthResponse response = authService.register(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -51,7 +51,7 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        log.info("REST request to login user: {}", request.getUsername());
+        log.info("REST request to login user");
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }

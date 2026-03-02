@@ -3,6 +3,7 @@ D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\audit\NoOpSecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\service\JwtService.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\controller\AuthController.java
+D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\exception\InvalidCredentialsException.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\repository\UserRepository.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\audit\SecurityAuditSender.java
 D:\Studies\S5\Project_dev\kit-commun-final (3)\kit-commun-final\auth-service\src\main\java\com\hospital\auth\config\RestTemplateConfig.java

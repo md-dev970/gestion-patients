@@ -1,0 +1,12 @@
+# Profil dev: rate limits réduits pour tests manuels (5 req/min)
+# Activer avec: -Dspring.profiles.active=dev
+# Permet de valider facilement le 429 après X requêtes
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+rate-limit:
+  requests-per-minute-per-ip: 5
+  requests-per-minute-per-user: 5
+  window-seconds: 60

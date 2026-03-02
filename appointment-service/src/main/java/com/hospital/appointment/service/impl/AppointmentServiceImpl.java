@@ -95,8 +95,9 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Transactional(readOnly = true)
     public List<AppointmentDTO> getAppointmentsByPatient(Long patientId) {
         log.debug("Fetching appointments for patient: {}", patientId);
-        return appointmentRepository.findByPatientIdOrderByAppointmentDateTimeDesc(patientId)
-                .stream()
+        List<Appointment> appointments = appointmentRepository.findByPatientIdOrderByAppointmentDateTimeDesc(patientId);
+        appointments.forEach(a -> securityAuditSender.sendPhiAccessed("APPOINTMENT", String.valueOf(a.getId()), "READ"));
+        return appointments.stream()
                 .map(appointmentMapper::toDTO)
                 .collect(Collectors.toList());
     }
@@ -105,8 +106,9 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Transactional(readOnly = true)
     public List<AppointmentDTO> getAppointmentsByDoctor(Long doctorId) {
         log.debug("Fetching appointments for doctor: {}", doctorId);
-        return appointmentRepository.findByDoctorIdOrderByAppointmentDateTimeAsc(doctorId)
-                .stream()
+        List<Appointment> appointments = appointmentRepository.findByDoctorIdOrderByAppointmentDateTimeAsc(doctorId);
+        appointments.forEach(a -> securityAuditSender.sendPhiAccessed("APPOINTMENT", String.valueOf(a.getId()), "READ"));
+        return appointments.stream()
                 .map(appointmentMapper::toDTO)
                 .collect(Collectors.toList());
     }
@@ -118,8 +120,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
 
-        return appointmentRepository.findDoctorAppointmentsInRange(doctorId, startOfDay, endOfDay)
-                .stream()
+        List<Appointment> appointments = appointmentRepository.findDoctorAppointmentsInRange(doctorId, startOfDay, endOfDay);
+        appointments.forEach(a -> securityAuditSender.sendPhiAccessed("APPOINTMENT", String.valueOf(a.getId()), "READ"));
+        return appointments.stream()
                 .map(appointmentMapper::toDTO)
                 .collect(Collectors.toList());
     }
@@ -149,6 +152,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         appointment.setStatus(status);
         Appointment updated = appointmentRepository.save(appointment);
+        securityAuditSender.sendPhiAccessed("APPOINTMENT", String.valueOf(id), "UPDATE");
 
         return appointmentMapper.toDTO(updated);
     }
@@ -163,6 +167,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointmentRepository.save(appointment);
+        securityAuditSender.sendPhiAccessed("APPOINTMENT", String.valueOf(id), "UPDATE");
     }
 
     @Override

@@ -19,4 +19,11 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.LOCKED)
                 .body(Map.of("error", ex.getMessage() != null ? ex.getMessage() : "Account temporarily locked"));
     }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidCredentials(InvalidCredentialsException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", ex.getMessage() != null ? ex.getMessage() : "Invalid credentials"));
+    }
 }

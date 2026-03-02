@@ -176,3 +176,27 @@ These are sent by the gateway when `security.audit.url` is set.
 | `path`      | string | Request path |
 | `method`    | string | HTTP method |
 | `category`  | string | `"SQLI"` or `"XSS"` |
+
+---
+
+## Rétention des logs d'audit et IDS (T2.4)
+
+### Politique de rétention recommandée
+
+| Type d'événement | Rétention recommandée | Action après délai |
+|------------------|------------------------|--------------------|
+| PHI_ACCESS, PHI_DELETED, DOSSIER_ACCESSED | 1 an (RGPD/HIPAA) | Purge ou anonymisation |
+| RATE_LIMIT_EXCEEDED, SUSPICIOUS_INPUT, ACCESS_DENIED | 90 jours | Purge |
+| ACCOUNT_LOCKED | 1 an | Purge ou archivage |
+| RETENTION_PURGE | 1 an | Archivage pour conformité |
+
+### Implémentation
+
+- Les événements sont envoyés à `security.audit.url` (et optionnellement `security.ids.url`).
+- La rétention et la purge sont gérées par le système de stockage (ELK, Splunk, base dédiée).
+- **ELK / OpenSearch** : Configurer l’**Index Lifecycle Management (ILM)** pour appliquer une politique de rétention (ex. `delete` après 90 jours ou 1 an selon le type d’index).
+- **Exemple ILM** : `hot` 7 jours → `warm` 83 jours → `delete` à 90 jours pour les événements IDS ; 365 jours pour les événements PHI.
+
+### Référence DPO
+
+Le DPO peut s’appuyer sur ces événements pour tracer les accès aux données personnelles et répondre aux demandes d’accès, de rectification et d’effacement (Art. 12–17 RGPD).

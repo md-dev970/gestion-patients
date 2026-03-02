@@ -211,6 +211,13 @@ In `application.yml` (and via environment variables in Docker):
 
 Example env vars: `RATE_LIMIT_REQUESTS_PER_MINUTE_PER_IP`, `RATE_LIMIT_REQUESTS_PER_MINUTE_PER_USER`, `RATE_LIMIT_WINDOW_SECONDS`.
 
+**Profil dev** : Pour tester le rate limiting facilement, activer le profil `dev` (`-Dspring.profiles.active=dev`). Le fichier `application-dev.yml` définit 5 req/min par IP et par utilisateur.
+
+**Recommandations pour la production** :
+- **Par IP** : 20–50 req/min pour limiter les abus sans bloquer les clients légitimes.
+- **Par utilisateur** : 50–100 req/min selon le type d’application.
+- Ajuster selon la charge et les besoins métier.
+
 ### 6.3 When limit is exceeded: 429 and event
 
 - The gateway responds with **429 Too Many Requests**, **`Content-Type: application/json`**, and body: `{"error":"Too Many Requests"}`.

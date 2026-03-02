@@ -119,6 +119,7 @@ class AppointmentServiceImplTest {
         verify(staffClient).checkStaffExists(2L);
         verify(appointmentRepository).findConflictingAppointments(eq(2L), any(LocalDateTime.class));
         verify(appointmentRepository).save(any(Appointment.class));
+        verify(securityAuditSender).sendPhiAccessed("APPOINTMENT", "1", "CREATE");
     }
 
     @Test
@@ -186,6 +187,7 @@ class AppointmentServiceImplTest {
         assertThat(result.get().getId()).isEqualTo(1L);
         verify(appointmentRepository).findById(1L);
         verify(appointmentMapper).toDTO(appointment);
+        verify(securityAuditSender).sendPhiAccessed("APPOINTMENT", "1", "READ");
     }
 
     @Test
@@ -219,6 +221,7 @@ class AppointmentServiceImplTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo(1L);
         verify(appointmentRepository).findByPatientIdOrderByAppointmentDateTimeDesc(1L);
+        verify(securityAuditSender).sendPhiAccessed("APPOINTMENT", "1", "READ");
     }
 
     @Test
@@ -252,6 +255,7 @@ class AppointmentServiceImplTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo(1L);
         verify(appointmentRepository).findByDoctorIdOrderByAppointmentDateTimeAsc(2L);
+        verify(securityAuditSender).sendPhiAccessed("APPOINTMENT", "1", "READ");
     }
 
     @Test
@@ -288,6 +292,7 @@ class AppointmentServiceImplTest {
         // Then
         assertThat(result).hasSize(1);
         verify(appointmentRepository).findDoctorAppointmentsInRange(2L, startOfDay, endOfDay);
+        verify(securityAuditSender).sendPhiAccessed("APPOINTMENT", "1", "READ");
     }
 
     @Test
@@ -315,6 +320,7 @@ class AppointmentServiceImplTest {
         verify(appointmentRepository).findById(1L);
         verify(appointmentMapper).updateEntityFromDTO(updateDTO, appointment);
         verify(appointmentRepository).save(appointment);
+        verify(securityAuditSender).sendPhiAccessed("APPOINTMENT", "1", "UPDATE");
     }
 
     @Test
@@ -352,6 +358,7 @@ class AppointmentServiceImplTest {
         assertThat(result.getStatus()).isEqualTo(newStatus);
         verify(appointmentRepository).findById(1L);
         verify(appointmentRepository).save(appointment);
+        verify(securityAuditSender).sendPhiAccessed("APPOINTMENT", "1", "UPDATE");
     }
 
     @Test
@@ -382,6 +389,7 @@ class AppointmentServiceImplTest {
         assertThat(appointment.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
         verify(appointmentRepository).findById(1L);
         verify(appointmentRepository).save(appointment);
+        verify(securityAuditSender).sendPhiAccessed("APPOINTMENT", "1", "UPDATE");
     }
 
     @Test

@@ -113,6 +113,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
 
         entryRepository.save(entry);
         log.info("Medical entry added with ID: {}", entry.getId());
+        securityAuditSender.sendPhiAccessed("MEDICAL_ENTRY", String.valueOf(entry.getId()), "CREATE");
 
         return entryMapper.toDTO(entry);
     }
@@ -121,8 +122,10 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     @Transactional(readOnly = true)
     public Optional<MedicalEntryDTO> getEntryById(Long entryId) {
         log.debug("Fetching medical entry: {}", entryId);
-        return entryRepository.findById(entryId)
+        Optional<MedicalEntryDTO> result = entryRepository.findById(entryId)
                 .map(entryMapper::toDTO);
+        result.ifPresent(dto -> securityAuditSender.sendPhiAccessed("MEDICAL_ENTRY", String.valueOf(entryId), "READ"));
+        return result;
     }
 
     @Override

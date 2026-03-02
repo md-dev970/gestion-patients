@@ -128,6 +128,20 @@ class PatientServiceImplTest {
     }
 
     @Test
+    @DisplayName("createPatient - sets default legalBasis when not provided")
+    void createPatient_setsDefaultLegalBasis() {
+        when(patientRepository.existsByNationalId("AB123456")).thenReturn(false);
+        when(patientMapper.toEntity(createRequest)).thenReturn(patient);
+        patient.setLegalBasis(null);
+        when(patientRepository.save(any(Patient.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(patientMapper.toDTO(any(Patient.class))).thenReturn(patientDTO);
+
+        patientService.createPatient(createRequest);
+
+        verify(patientRepository).save(argThat(p -> "consent".equals(p.getLegalBasis())));
+    }
+
+    @Test
     @DisplayName("createPatient - sets retentionUntil from config")
     void createPatient_setsRetentionUntil() {
         when(patientRepository.existsByNationalId("AB123456")).thenReturn(false);
@@ -411,6 +425,7 @@ class PatientServiceImplTest {
         verify(medicalRecordClient).getMedicalRecordByPatientId(1L);
         verify(consultationClient).getConsultationsByPatientId(1L);
         verify(appointmentClient).getAppointmentsByPatientId(1L);
+        verify(securityAuditSender).sendPhiAccessed("PATIENT_DOSSIER", "1", "READ");
     }
 
     @Test

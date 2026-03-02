@@ -5,6 +5,8 @@ import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { Layout } from "./components/Layout";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
+import { TermsAndConditions } from "./pages/TermsAndConditions";
+import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import { Dashboard } from "./pages/Dashboard";
 import { Patients } from "./pages/Patients";
 import { Staff } from "./pages/Staff";
@@ -34,6 +36,8 @@ export default function App() {
             </PublicRoute>
           }
         />
+        <Route path="/terms" element={<TermsAndConditions />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route
           path="/"
           element={

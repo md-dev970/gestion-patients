@@ -72,13 +72,15 @@ logging:
     org.springframework.security: DEBUG
 
 ---
-# Profil Docker
+# Profil Docker (show-sql disabled for prod/RGPD)
 spring:
   config:
     activate:
       on-profile: docker
   datasource:
     url: jdbc:postgresql://postgres-auth:5432/hospital_auth
+  jpa:
+    show-sql: false
 
 eureka:
   client:

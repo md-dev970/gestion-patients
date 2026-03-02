@@ -60,3 +60,19 @@ logging:
     root: INFO
     com.hospital.medicalrecord: DEBUG
 
+---
+# Profil Docker (show-sql disabled for prod/RGPD)
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:postgresql://postgres-medical-records:5432/hospital_medical_records
+  jpa:
+    show-sql: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+

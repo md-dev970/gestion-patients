@@ -79,6 +79,7 @@ public class ConsultationServiceImpl implements ConsultationService {
         
         List<Consultation> consultations = consultationRepository
                 .findByPatientIdOrderByConsultationDateDesc(patientId);
+        consultations.forEach(c -> securityAuditSender.sendPhiAccessed("CONSULTATION", c.getConsultationId().toString(), "READ"));
         
         return consultationMapper.toDTOList(consultations);
     }
@@ -103,7 +104,9 @@ public class ConsultationServiceImpl implements ConsultationService {
     @Transactional(readOnly = true)
     public List<ConsultationDTO> getAllConsultations() {
         log.debug("Fetching all consultations");
-        return consultationMapper.toDTOList(consultationRepository.findAll());
+        List<Consultation> consultations = consultationRepository.findAll();
+        consultations.forEach(c -> securityAuditSender.sendPhiAccessed("CONSULTATION", c.getConsultationId().toString(), "READ"));
+        return consultationMapper.toDTOList(consultations);
     }
 
     @Override
@@ -113,6 +116,7 @@ public class ConsultationServiceImpl implements ConsultationService {
         
         List<Consultation> consultations = consultationRepository
                 .findByUserIdOrderByConsultationDateDesc(userId);
+        consultations.forEach(c -> securityAuditSender.sendPhiAccessed("CONSULTATION", c.getConsultationId().toString(), "READ"));
         
         return consultationMapper.toDTOList(consultations);
     }
@@ -123,6 +127,7 @@ public class ConsultationServiceImpl implements ConsultationService {
         log.debug("Fetching consultations between {} and {}", start, end);
         
         List<Consultation> consultations = consultationRepository.findByDateRange(start, end);
+        consultations.forEach(c -> securityAuditSender.sendPhiAccessed("CONSULTATION", c.getConsultationId().toString(), "READ"));
         
         return consultationMapper.toDTOList(consultations);
     }

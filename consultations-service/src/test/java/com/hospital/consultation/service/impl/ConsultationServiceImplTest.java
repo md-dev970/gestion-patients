@@ -175,6 +175,7 @@ class ConsultationServiceImplTest {
         assertThat(result.get(0).getPatientId()).isEqualTo(1L);
         verify(consultationRepository).findByPatientIdOrderByConsultationDateDesc(1L);
         verify(consultationMapper).toDTOList(consultations);
+        verify(securityAuditSender).sendPhiAccessed("CONSULTATION", consultationId.toString(), "READ");
     }
 
     @Test
@@ -252,6 +253,7 @@ class ConsultationServiceImplTest {
         assertThat(result).hasSize(1);
         verify(consultationRepository).findAll();
         verify(consultationMapper).toDTOList(consultations);
+        verify(securityAuditSender).sendPhiAccessed("CONSULTATION", consultationId.toString(), "READ");
     }
 
     @Test
@@ -287,6 +289,7 @@ class ConsultationServiceImplTest {
         assertThat(result.get(0).getUserId()).isEqualTo(2L);
         verify(consultationRepository).findByUserIdOrderByConsultationDateDesc(2L);
         verify(consultationMapper).toDTOList(consultations);
+        verify(securityAuditSender).sendPhiAccessed("CONSULTATION", consultationId.toString(), "READ");
     }
 
     @Test

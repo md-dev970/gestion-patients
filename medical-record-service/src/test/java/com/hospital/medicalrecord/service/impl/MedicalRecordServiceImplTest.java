@@ -222,6 +222,7 @@ class MedicalRecordServiceImplTest {
         verify(entryMapper).toEntity(medicalEntryDTO);
         verify(entryRepository).save(medicalEntry);
         verify(entryMapper).toDTO(medicalEntry);
+        verify(securityAuditSender).sendPhiAccessed("MEDICAL_ENTRY", "1", "CREATE");
     }
 
     @Test
@@ -254,6 +255,7 @@ class MedicalRecordServiceImplTest {
         assertThat(result.get().getId()).isEqualTo(1L);
         verify(entryRepository).findById(1L);
         verify(entryMapper).toDTO(medicalEntry);
+        verify(securityAuditSender).sendPhiAccessed("MEDICAL_ENTRY", "1", "READ");
     }
 
     @Test
@@ -269,6 +271,7 @@ class MedicalRecordServiceImplTest {
         assertThat(result).isEmpty();
         verify(entryRepository).findById(1L);
         verify(entryMapper, never()).toDTO(any());
+        verify(securityAuditSender, never()).sendPhiAccessed(any(), any(), any());
     }
 
     @Test

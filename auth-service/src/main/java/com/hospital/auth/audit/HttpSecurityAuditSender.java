@@ -37,11 +37,11 @@ public class HttpSecurityAuditSender implements SecurityAuditSender {
 
     @Override
     public void sendAccountLocked(long userId, String username, String reason) {
+        // username omitted from payload (no PII in audit events)
         Map<String, Object> payload = Map.of(
                 "eventType", "ACCOUNT_LOCKED",
                 "timestamp", Instant.now().toString(),
                 "userId", String.valueOf(userId),
-                "username", username != null ? username : "",
                 "reason", reason != null ? reason : "BRUTEFORCE"
         );
         HttpHeaders headers = new HttpHeaders();

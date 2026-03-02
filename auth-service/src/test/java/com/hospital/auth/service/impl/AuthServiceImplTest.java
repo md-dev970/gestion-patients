@@ -6,6 +6,7 @@ import com.hospital.auth.dto.AuthResponse;
 import com.hospital.auth.dto.LoginRequest;
 import com.hospital.auth.dto.RegisterRequest;
 import com.hospital.auth.exception.AccountTemporarilyLockedException;
+import com.hospital.auth.exception.InvalidCredentialsException;
 import com.hospital.auth.model.Role;
 import com.hospital.auth.model.User;
 import com.hospital.auth.repository.UserRepository;
@@ -210,8 +211,8 @@ class AuthServiceImplTest {
     }
 
     @Test
-    @DisplayName("login - invalid password - throws RuntimeException")
-    void login_invalidPassword_throwsRuntimeException() {
+    @DisplayName("login - invalid password - throws InvalidCredentialsException (401)")
+    void login_invalidPassword_throwsInvalidCredentialsException() {
         // Given
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123", hashedPassword)).thenReturn(false);
@@ -219,7 +220,7 @@ class AuthServiceImplTest {
 
         // When/Then
         assertThatThrownBy(() -> authService.login(loginRequest))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessageContaining("Invalid credentials");
         verify(userRepository).findByUsername("testuser");
         verify(passwordEncoder).matches("password123", hashedPassword);
@@ -240,7 +241,7 @@ class AuthServiceImplTest {
             user.setFailedAttempts(i);
             when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
             assertThatThrownBy(() -> authService.login(loginRequest))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(InvalidCredentialsException.class)
                     .hasMessageContaining("Invalid credentials");
         }
         verify(securityAuditSender, never()).sendAccountLocked(anyLong(), any(), any());
