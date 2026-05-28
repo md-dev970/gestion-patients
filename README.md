@@ -1,5 +1,14 @@
 # Hospital Patient Microservices Platform
 
+![Java 17](https://img.shields.io/badge/Java-17-007396?logo=openjdk&logoColor=white)
+![Spring Boot 3.2](https://img.shields.io/badge/Spring%20Boot-3.2-6DB33F?logo=springboot&logoColor=white)
+![Spring Cloud](https://img.shields.io/badge/Spring%20Cloud-2023.0-6DB33F?logo=spring&logoColor=white)
+![PostgreSQL 15](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
+![Docker Compose](https://img.shields.io/badge/Docker%20Compose-enabled-2496ED?logo=docker&logoColor=white)
+![React 18](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)
+
 This repository contains a Spring Boot microservices platform for hospital patient-data management. It includes the common clinical services, authentication, service discovery, an API security gateway, PostgreSQL databases per service, and a React frontend.
 
 The platform is designed around the "database per service" pattern and exposes all client API traffic through `gateway-service` on port `8080`.
