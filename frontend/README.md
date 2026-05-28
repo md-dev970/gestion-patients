@@ -1,31 +1,126 @@
-# KIT COMMUN Frontend
+# Hospital Platform Frontend
 
-React + TypeScript + Vite + Chakra UI v3 frontend for the KIT COMMUN hospital gateway.
+React + TypeScript + Vite frontend for the hospital patient microservices platform.
 
-## Setup
+The UI communicates with the backend through `gateway-service`; it should not call individual microservices directly.
 
-1. Copy `.env.example` to `.env` and set the API gateway URL if needed:
-   ```bash
-   cp .env.example .env
-   ```
-   Default: `VITE_API_URL=http://localhost:8080` (edit `.env` to match your gateway).
+## Stack
 
-2. Install dependencies and run the dev server:
-   ```bash
-   npm install
-   npm run dev
-   ```
-   The app will be at `http://localhost:5173` (or the next free port).
+- React 18
+- TypeScript
+- Vite
+- Chakra UI
+- Axios
+- React Router
 
-## Running with the backend
+## Requirements
 
-- Start the backend (gateway and services) first, e.g. via Docker Compose or Maven from the repo root.
-- Ensure the gateway is at `http://localhost:8080` (or set `VITE_API_URL` in `.env` to your gateway URL).
-- CORS is configured in the gateway to allow the frontend origin (e.g. `http://localhost:5173`).
+- Node.js 18 or newer
+- npm
+- Backend gateway running on `http://localhost:8080` or another configured URL
+
+## Configuration
+
+Create a local environment file when you need to override the API URL:
+
+```bash
+cp .env.example .env
+```
+
+Default:
+
+```text
+VITE_API_URL=http://localhost:8080
+```
+
+If the backend is running with HTTPS locally, use:
+
+```text
+VITE_API_URL=https://localhost:8080
+```
+
+For self-signed development certificates, the browser must trust or explicitly accept the certificate before API requests will succeed.
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the dev server:
+
+```bash
+npm run dev
+```
+
+The app is usually available at:
+
+```text
+http://localhost:5173
+```
+
+If port `5173` is already in use, Vite will choose the next available port.
+
+## Backend Startup
+
+Start the backend before using the UI:
+
+```bash
+docker-compose up -d --build
+```
+
+Then verify the gateway:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
 
 ## Build
+
+Create a production build:
 
 ```bash
 npm run build
 ```
-Output is in `dist/`. Serve with any static file server or use `npm run preview` to try the production build locally.
+
+Preview the production build locally:
+
+```bash
+npm run preview
+```
+
+The generated files are written to `dist/`.
+
+## API Access Pattern
+
+All API calls should go through the gateway URL:
+
+```text
+${VITE_API_URL}/api/...
+```
+
+Examples:
+
+- `${VITE_API_URL}/api/auth/login`
+- `${VITE_API_URL}/api/patients`
+- `${VITE_API_URL}/api/appointments`
+- `${VITE_API_URL}/api/medical-records`
+- `${VITE_API_URL}/api/consultations`
+
+Authenticated requests should send:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+## Common Issues
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Network errors in browser | Gateway is not running | Start backend and check `/actuator/health` |
+| `401 Unauthorized` | Missing or expired token | Login again |
+| `403 Forbidden` | Role is not allowed by gateway RBAC | Use an account with the required role |
+| CORS failure | Gateway CORS config or wrong API URL | Verify `VITE_API_URL` and gateway config |
+| HTTPS certificate warning | Local self-signed certificate | Accept/trust the dev certificate |

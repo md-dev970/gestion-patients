@@ -1,59 +1,74 @@
-# Security Gateway – HTTPS & Routing
+# Gateway HTTPS, Routing, And Security Runbook
 
-This document explains how the `gateway-service` is positioned as the **single entry point**
-for the KIT COMMUN microservices and how HTTPS support and tests are set up.
+This document explains how `gateway-service` acts as the single API entry point, how to run it with HTTPS, and how its security filters behave.
 
----
+## 1. Gateway Role
 
-## 1. Role of `gateway-service`
+`gateway-service` is a Spring Cloud Gateway reverse proxy.
 
-This service is the **security-gateway** (reverse proxy) for the KIT COMMUN stack (T1.1). All client traffic goes through it before reaching backend microservices.
+It is responsible for:
 
-- Technology: **Spring Cloud Gateway** (reactive, with Eureka discovery).
-- Default listening port: **8080**.
-- Responsibility:
-  - Receive all external HTTP(S) traffic.
-  - Route `/api/...` requests to the appropriate KIT COMMUN microservice.
-  - Apply authentication and (later) authorization filters.
+- Receiving all client API traffic.
+- Routing requests to backend services through Eureka.
+- Verifying JWT bearer tokens.
+- Applying RBAC before proxying sensitive requests.
+- Enforcing rate limits and login-abuse protection.
+- Rejecting suspicious query/header values.
+- Adding secure response headers.
+- Emitting audit and IDS events.
 
-The routing configuration is defined in:
+Default URL:
 
-- `gateway-service/src/main/resources/application.yml`  
-  using `spring.cloud.gateway.routes` with `lb://` URIs.
-
----
-
-## 2. All external traffic goes through the gateway
-
-In `docker-compose.yml`:
-
-- `gateway-service` exposes its port to the host:
-
-```yaml
-gateway-service:
-  ports:
-    - "8080:8080"
+```text
+http://localhost:8080
 ```
 
-- The KIT COMMUN microservices (`auth-service`, `patient-service`, `staff-service`,
-  `appointment-service`, `medical-record-service`, `consultations-service`) **no longer
-  expose** their ports to the host. They are only reachable inside the `hospital-network`
-  bridge network.
+HTTPS URL when TLS is enabled:
 
-Result:
+```text
+https://localhost:8080
+```
 
-- From outside Docker, clients can only reach the system at:  
-  `http://localhost:8080/...` (and, when configured, via HTTPS).
+## 2. Routing
 
-**Verifying the reverse proxy is operational (T1.1)**  
-After starting the stack (`docker-compose up -d --build`), wait for the gateway to be healthy. Then: (1) `curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health` → expect **200**; (2) `curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/patients/1` → expect **401** (no token; confirms the request went through the gateway). See [SECURITY-GATEWAY.md](SECURITY-GATEWAY.md) for the full runbook.
+Routes are configured in `src/main/resources/application.yml`:
 
----
+| Path | Backend |
+|------|---------|
+| `/api/auth/**` | `lb://auth-service` |
+| `/api/patients/**` | `lb://patient-service` |
+| `/api/staff/**` | `lb://staff-service` |
+| `/api/appointments/**` | `lb://appointment-service` |
+| `/api/medical-records/**` | `lb://medical-record-service` |
+| `/api/consultations/**` | `lb://consultations-service` |
 
-## 3. HTTPS / TLS support
+In Docker Compose, backend microservices are not exposed to the host. External clients reach the platform through the gateway only.
 
-HTTPS support is enabled at the Spring Boot level via the `server.ssl` configuration
-in `application.yml`:
+## 3. Basic Verification
+
+Start the stack:
+
+```bash
+docker-compose up -d --build
+```
+
+Check gateway health:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health
+# Expected: 200
+```
+
+Check that protected routes are intercepted:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/patients/1
+# Expected: 401 without a token
+```
+
+## 4. HTTPS / TLS
+
+TLS is configured with Spring Boot `server.ssl` properties:
 
 ```yaml
 server:
@@ -66,375 +81,289 @@ server:
     key-alias: ${SERVER_SSL_KEY_ALIAS:gateway}
 ```
 
-- By default, `SERVER_SSL_ENABLED` is `false` → the gateway runs in HTTP on port 8080.
-- To enable HTTPS you must:
-  1. Provide a valid key store (PKCS12/JKS) accessible from the container or JVM.
-  2. Set environment variables, for example:
+By default, `SERVER_SSL_ENABLED=false` and the gateway runs on HTTP.
 
-```bash
-export SERVER_SSL_ENABLED=true
-export SERVER_SSL_KEY_STORE=/path/to/gateway-keystore.p12
-export SERVER_SSL_KEY_STORE_PASSWORD=changeit
-export SERVER_SSL_KEY_STORE_TYPE=PKCS12
-export SERVER_SSL_KEY_ALIAS=gateway
+### Development Keystore
+
+Windows:
+
+```powershell
+cd gateway-service
+.\scripts\generate-dev-keystore.bat
+cd ..
 ```
 
-In Docker/Kubernetes, these values should be injected via environment variables and
-the key store mounted as a volume or provided via a secret.
+Linux or macOS:
 
-> Note: The project does **not** ship a key store file. It is the operator’s
-> responsibility to generate and mount the certificate/key (or use the dev script below).
+```bash
+cd gateway-service
+./scripts/generate-dev-keystore.sh
+cd ..
+```
 
-### T1.2 – Activer HTTPS
+Start with the TLS override:
 
-- **Production**: Provide your own keystore (PKCS12/JKS) and set the environment variables (`SERVER_SSL_ENABLED=true`, `SERVER_SSL_KEY_STORE`, `SERVER_SSL_KEY_STORE_PASSWORD`, `SERVER_SSL_KEY_STORE_TYPE`, `SERVER_SSL_KEY_ALIAS`). Mount the keystore in Docker or point to its path.
-- **Dev / démo**: Run the script to generate a self-signed keystore:
-  - From `gateway-service`: `./scripts/generate-dev-keystore.sh` (or `scripts\generate-dev-keystore.bat` on Windows). This creates `build/gateway-dev.p12`.
-  - Set `SERVER_SSL_ENABLED=true`, `SERVER_SSL_KEY_STORE=<path-to>/gateway-dev.p12`, `SERVER_SSL_KEY_STORE_PASSWORD=changeit`, `SERVER_SSL_KEY_STORE_TYPE=PKCS12`, `SERVER_SSL_KEY_ALIAS=gateway`.
-  - Start the gateway; it will listen on HTTPS on port 8080.
-- **Vérification**: `curl -k https://localhost:8080/actuator/health` → **200**. `curl -k https://localhost:8080/api/patients/1` → **401**. Use `-k` to accept the self-signed certificate in dev.
-- **HSTS avec HTTPS**: When TLS is on, activate the `tls` profile so HSTS is sent (e.g. `SPRING_PROFILES_ACTIVE=docker,tls` or `spring.profiles.include=tls`). The profile is defined in `application-tls.yml` and re-enables the `Strict-Transport-Security` header.
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build
+```
 
-**Redirection HTTP vers HTTPS (T1.2)**  
-When HTTPS is enabled, the gateway listens **only on HTTPS** (port 8080). There is no HTTP listener on the gateway; clients must use `https://`. For HTTP→HTTPS redirect (e.g. users typing `http://`), use a reverse proxy or load balancer in front of the gateway: listen on port 80 and respond with **301** or **302** to `https://<host>:8080/...` (or to 443 if the proxy terminates TLS). Spring Cloud Gateway (Netty) does not support two listeners (HTTP + HTTPS) in the same process out of the box.
+Verify:
 
-**Docker avec TLS (T1.2)**  
-When TLS is enabled in Docker, set the SSL environment variables and mount the keystore (e.g. a volume pointing to the host path of your PKCS12 file). The gateway healthcheck must use **HTTPS** (and, for self-signed certs, ignore certificate verification). An optional override file **`docker-compose.tls.yml`** at the project root is provided: it overrides the gateway with TLS env, mounts `gateway-service/build` as the keystore directory (after running `./scripts/generate-dev-keystore.sh`), and sets the healthcheck to `wget ... https://localhost:8080/actuator/health` with `--no-check-certificate`. Run with: `docker-compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build`. Verify with `curl -k https://localhost:8080/actuator/health`.
+```bash
+curl -k https://localhost:8080/actuator/health
+# Expected: 200
+```
 
----
+Use `-k` only for local self-signed certificates.
 
-## 4. JWT verification
+### Production TLS
 
-The gateway verifies a JWT on **every request** except for public paths.
+For production:
 
-- **Algorithms** (T1.3):
-  - **RS256** (recommended for production): When a **public key** is provided, the gateway verifies tokens with RS256. The auth-service signs tokens with the corresponding **private key** (from its own Secrets). The gateway only needs the **public key** (from Secrets: env `JWT_PUBLIC_KEY` or file `JWT_PUBLIC_KEY_LOCATION`). No shared secret is required.
-  - **HS256** (default when no public key is set): Tokens are verified using a **shared secret** (`jwt.secret` / `JWT_SECRET`), same as auth-service.
-- **Configuration**:
-  - **RS256**: Set `JWT_PUBLIC_KEY` to the PEM string (e.g. from Secrets), or `JWT_PUBLIC_KEY_LOCATION` to a file path (mounted from Secrets). In `application.yml`: `jwt.public-key` and `jwt.public-key-location` (empty by default).
-  - **HS256**: `jwt.secret` must be the same Base64-encoded secret as in auth-service; override with `JWT_SECRET` in Docker/Secrets.
-- **Key generation (RS256)**: Use the provided script to generate an RSA key pair. Give the **private key** to auth-service (Secrets: `JWT_PRIVATE_KEY` or `JWT_PRIVATE_KEY_LOCATION`) and the **public key** to the gateway (Secrets: `JWT_PUBLIC_KEY` or `JWT_PUBLIC_KEY_LOCATION`).
-  - From project root: `./gateway-service/scripts/generate-jwt-rs256-keys.sh` (Linux/macOS) or `gateway-service\scripts\generate-jwt-rs256-keys.bat` (Windows, requires OpenSSL). Output: `gateway-service/build/jwt-keys/private.pem` (auth), `public.pem` (gateway). **Do not commit** `private.pem`.
-- **Public paths** (no token required):
-  - `/api/auth/login`
-  - `/api/auth/register`
-  - `/api/auth/refresh`
-  - `/actuator/health`
-- **Protected paths**: Any other path (e.g. `/api/patients/**`, `/api/staff/**`) requires a valid `Authorization: Bearer <token>` header. If the header is missing, not Bearer, or the token is invalid/expired, the gateway responds with **401 Unauthorized** and a JSON body `{"error":"..."}`. Response headers include `Content-Type: application/json` and `WWW-Authenticate: Bearer`.
-- **Forwarded headers** (when the token is valid): The gateway adds the following headers to the request before forwarding to downstream services (so microservices can use them without parsing the JWT):
-  - `X-User-Id`: user ID from the token
-  - `X-Username`: subject (username)
-  - `X-User-Roles`: comma-separated list of roles
+- Use a certificate issued by a trusted CA.
+- Mount the keystore as a secret or secure volume.
+- Set `SERVER_SSL_ENABLED=true`.
+- Enable the TLS profile so HSTS is sent.
+- Prefer port 443 behind a load balancer or reverse proxy.
 
-**Shared secret (HS256 only)**: In development, the default `jwt.secret` in `application.yml` matches auth-service. In Docker/production with HS256, set the same `JWT_SECRET` for both gateway-service and auth-service. When using RS256, the gateway uses only the public key and does not need `jwt.secret`.
+Spring Cloud Gateway runs a single listener by default. If you need HTTP-to-HTTPS redirect on port 80, place a load balancer or reverse proxy in front of the gateway.
 
----
+## 5. JWT Verification
 
-## 5. RBAC on patient dossiers (US1.3 / T1.4)
+Public paths do not require a token:
 
-After authentication, the gateway applies **role-based access control (RBAC)** on requests to patient-dossier resources. The **RBAC engine** (T1.4) evaluates rules by role, resource, and action; the allow/deny decision is taken **before** the request is proxied to the backend. This is enforced only in the gateway; no change is made to KIT COMMUN controllers or business logic.
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+- `POST /api/auth/refresh`
+- `/actuator/health`
 
-### 5.1 Paths under RBAC
+All other paths require:
 
-Only the following path prefixes are subject to this RBAC:
+```http
+Authorization: Bearer <accessToken>
+```
 
-- **`/api/patients/**`** – patient CRUD and search
-- **`/api/medical-records/**`** – medical records
-- **`/api/consultations/**`** – consultations
+After successful verification, the gateway forwards:
 
-All other paths (e.g. `/api/auth/**`, `/api/staff/**`, `/api/appointments/**`) are **not** checked by this RBAC filter; they are only subject to authentication (valid JWT).
+```http
+X-User-Id: <user id>
+X-Username: <username>
+X-User-Roles: ROLE_ADMIN,ROLE_DOCTOR
+```
 
-### 5.2 Role / permission matrix
+### Algorithms
 
-Actions are derived from the HTTP method: **GET → READ**, **POST → CREATE**, **PUT/PATCH → UPDATE**, **DELETE → DELETE**.
+| Mode | Use | Configuration |
+|------|-----|---------------|
+| RS256 | Recommended for production | `JWT_PRIVATE_KEY` or `JWT_PRIVATE_KEY_LOCATION` in auth service; `JWT_PUBLIC_KEY` or `JWT_PUBLIC_KEY_LOCATION` in gateway |
+| HS256 | Development fallback | Same `JWT_SECRET` in auth service and gateway |
 
-| Resource          | READ | CREATE | UPDATE | DELETE |
-|-------------------|------|--------|--------|--------|
-| **PATIENTS**      | ADMIN, MEDECIN, DOCTOR, INFIRMIER, NURSE, RECEPTIONIST, LAB_TECH | ADMIN, MEDECIN, DOCTOR, NURSE, RECEPTIONIST | ADMIN, MEDECIN, DOCTOR, NURSE | ADMIN only |
-| **MEDICAL_RECORDS** | ADMIN, MEDECIN, DOCTOR, INFIRMIER, NURSE, LAB_TECH | ADMIN, MEDECIN, DOCTOR, NURSE, LAB_TECH | ADMIN, MEDECIN, DOCTOR, NURSE | ADMIN only |
-| **CONSULTATIONS** | ADMIN, MEDECIN, DOCTOR, INFIRMIER, NURSE | ADMIN, MEDECIN, DOCTOR, NURSE | ADMIN, MEDECIN, DOCTOR, NURSE | ADMIN only |
+Generate development RS256 keys:
 
-Role names in the JWT (and in `X-User-Roles`) must match the auth-service `Role` enum: `ROLE_ADMIN`, `ROLE_MEDECIN`, `ROLE_DOCTOR`, `ROLE_INFIRMIER`, `ROLE_NURSE`, `ROLE_RECEPTIONIST`, `ROLE_LAB_TECH`, `ROLE_PATIENT`. **ROLE_PATIENT** has **no** access to these patient-dossier paths in the current policy (no “own dossier only” claim in the JWT by default).
+Windows:
 
-### 5.3 Denied access: 403 and audit
+```powershell
+gateway-service\scripts\generate-jwt-rs256-keys.bat
+```
 
-- If the authenticated user’s roles do **not** allow the requested action on the resource, the gateway:
-  1. Responds with **403 Forbidden**.
-  2. Sets **`Content-Type: application/json`** and a JSON body: `{"error":"Forbidden"}` (generic message).
-  3. Does **not** call the downstream service (request is not proxied).
-  4. Emits an **ACCESS_DENIED** audit event (see below).
+Linux or macOS:
 
-Filter order: **AuthenticationFilter** (order -100) runs first (401 if no/invalid token); **RbacAuthorizationFilter** (order -50) runs next (403 if not allowed).
+```bash
+./gateway-service/scripts/generate-jwt-rs256-keys.sh
+```
 
-### 5.4 ACCESS_DENIED audit event
+Do not commit private keys.
 
-Every 403 from the RBAC filter triggers an **ACCESS_DENIED** event. The payload is **pseudonymised** (no PII/PHI: no patient name, no diagnosis).
+## 6. RBAC
 
-| Field          | Description |
-|----------------|-------------|
-| `eventType`    | `"ACCESS_DENIED"` |
-| `timestamp`    | ISO-8601 instant |
-| `userId`       | Technical user ID (from JWT / `X-User-Id`) |
-| `resourceType` | `PATIENTS` \| `MEDICAL_RECORDS` \| `CONSULTATIONS` |
-| `resourceId`   | ID extracted from path when applicable (e.g. patient or record id), or empty |
-| `action`       | `READ` \| `CREATE` \| `UPDATE` \| `DELETE` |
-| `reason`       | e.g. `"RBAC_DENY"` |
+RBAC is enforced by the gateway before the request is proxied.
 
-**Sending the event**
+Actions are derived from HTTP methods:
 
-- **By default**, no external service is called: the gateway uses a **no-op** implementation of the audit sender (optional DEBUG log only).
-- To send events to a **security-audit-log** service, set in configuration:
-  - **`security.audit.url`** to the audit endpoint URL (e.g. `http://security-audit-log:8080/api/events`).  
-  When this property is set, the gateway uses an HTTP implementation that POSTs the JSON payload to that URL (fire-and-forget, non-blocking). If the service is not yet deployed, leave the property unset so that the no-op remains in use.
+| Method | Action |
+|--------|--------|
+| GET | `READ` |
+| POST | `CREATE` |
+| PUT / PATCH | `UPDATE` |
+| DELETE | `DELETE` |
 
----
+Core policy:
 
-## 6. Rate limiting (US1.4 / T1.5)
+| Resource | READ | CREATE | UPDATE | DELETE |
+|----------|------|--------|--------|--------|
+| Patients | Admin, doctors, nurses, receptionist, lab tech | Admin, doctors, nurses, receptionist | Admin, doctors, nurses | Admin; patient self-delete when own ID |
+| Medical records | Admin, doctors, nurses, lab tech | Admin, doctors, nurses, lab tech | Admin, doctors, nurses | Admin |
+| Consultations | Admin, doctors, nurses | Admin, doctors, nurses | Admin, doctors, nurses | Admin |
+| Appointments | Admin, doctors, nurses, receptionist | Admin, doctors, nurses, receptionist | Admin, doctors, nurses, receptionist | Admin |
 
-The gateway applies **rate limiting middleware** (T1.5) with an **in-memory store**; **429** is returned when the limit is exceeded. Configurable rate limits apply by **client IP** and by **authenticated user** to reduce abuse. When a limit is exceeded, the gateway returns **429 Too Many Requests** and emits a **RATE_LIMIT_EXCEEDED** event (for IDS/audit).
+Role names include:
 
-### 6.1 Limits applied
+- `ROLE_ADMIN`
+- `ROLE_MEDECIN`
+- `ROLE_DOCTOR`
+- `ROLE_INFIRMIER`
+- `ROLE_NURSE`
+- `ROLE_RECEPTIONIST`
+- `ROLE_LAB_TECH`
+- `ROLE_PATIENT`
 
-- **Per IP**: Every request (including unauthenticated ones, e.g. login/register) counts against the **per-IP** limit. The client IP is taken from the **`X-Forwarded-For`** header (first value) when present, otherwise from the request’s remote address.
-- **Per user**: For requests that already have **`X-User-Id`** (set by the AuthenticationFilter after a valid JWT), an additional **per-user** limit is applied. Both limits must be satisfied for the request to proceed.
+Denied requests:
 
-### 6.2 Configuration
+- Return `403 Forbidden`.
+- Do not call the backend service.
+- Emit `ACCESS_DENIED` when audit is configured.
 
-In `application.yml` (and via environment variables in Docker):
+## 7. Rate Limiting
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `rate-limit.requests-per-minute-per-ip` | Max requests per window per client IP | 100 |
-| `rate-limit.requests-per-minute-per-user` | Max requests per window per authenticated user | 100 |
-| `rate-limit.window-seconds` | Window duration in seconds | 60 |
-| `rate-limit.excluded-paths` | Path prefixes that do not consume quota (e.g. health checks) | `/actuator/health` |
+The gateway applies in-memory rate limiting.
 
-Example env vars: `RATE_LIMIT_REQUESTS_PER_MINUTE_PER_IP`, `RATE_LIMIT_REQUESTS_PER_MINUTE_PER_USER`, `RATE_LIMIT_WINDOW_SECONDS`.
+| Property | Default | Environment Variable |
+|----------|---------|----------------------|
+| `rate-limit.requests-per-minute-per-ip` | `100` | `RATE_LIMIT_REQUESTS_PER_MINUTE_PER_IP` |
+| `rate-limit.requests-per-minute-per-user` | `100` | `RATE_LIMIT_REQUESTS_PER_MINUTE_PER_USER` |
+| `rate-limit.window-seconds` | `60` | `RATE_LIMIT_WINDOW_SECONDS` |
 
-**Profil dev** : Pour tester le rate limiting facilement, activer le profil `dev` (`-Dspring.profiles.active=dev`). Le fichier `application-dev.yml` définit 5 req/min par IP et par utilisateur.
+When exceeded:
 
-**Recommandations pour la production** :
-- **Par IP** : 20–50 req/min pour limiter les abus sans bloquer les clients légitimes.
-- **Par utilisateur** : 50–100 req/min selon le type d’application.
-- Ajuster selon la charge et les besoins métier.
+- The gateway returns `429 Too Many Requests`.
+- The backend is not called.
+- `RATE_LIMIT_EXCEEDED` is emitted when audit/IDS is configured.
 
-### 6.3 When limit is exceeded: 429 and event
+The current store is in-memory. With multiple gateway instances, limits are per instance unless replaced by a shared store.
 
-- The gateway responds with **429 Too Many Requests**, **`Content-Type: application/json`**, and body: `{"error":"Too Many Requests"}`.
-- The request is **not** proxied to the backend.
-- A **RATE_LIMIT_EXCEEDED** event is sent (see below) in a non-blocking way (fire-and-forget).
+## 8. Login Anti-Bruteforce By IP
 
-**Filter order**: **RateLimitFilter** runs with order **-90**, i.e. after **AuthenticationFilter** (-100) and before **RbacAuthorizationFilter** (-50).
+The gateway tracks failed `POST /api/auth/login` responses by client IP.
 
-### 6.4 RATE_LIMIT_EXCEEDED event (IDS)
+| Property | Default | Environment Variable |
+|----------|---------|----------------------|
+| `bruteforce-ip.max-failed-attempts` | `5` | `BRUTEFORCE_IP_MAX_FAILED_ATTEMPTS` |
+| `bruteforce-ip.lockout-duration-minutes` | `15` | `BRUTEFORCE_IP_LOCKOUT_DURATION_MINUTES` |
+| `bruteforce-ip.login-path` | `/api/auth/login` | `BRUTEFORCE_IP_LOGIN_PATH` |
 
-Each 429 triggers a **RATE_LIMIT_EXCEEDED** event. The payload is suitable for IDS/audit (key type and key identify the limit that was exceeded).
+When the IP is blocked:
 
-| Field | Description |
-|-------|-------------|
-| `eventType` | `"RATE_LIMIT_EXCEEDED"` |
-| `timestamp` | ISO-8601 instant |
-| `keyType` | `"IP"` or `"USER"` |
-| `key` | Client IP or user ID (technical identifier) |
-| `limit` | Configured limit (requests per window) |
-| `windowSeconds` | Configured window in seconds |
+- The gateway returns `423 Locked`.
+- The auth service is not called.
+- A `RATE_LIMIT_EXCEEDED` event is emitted with `keyType=BRUTEFORCE_IP`.
 
-**Sending the event**
+`auth-service` also implements per-account anti-bruteforce. See [../auth-service/AUTH-SECURITY.md](../auth-service/AUTH-SECURITY.md).
 
-- **By default**, the same **no-op** implementation as for ACCESS_DENIED is used (DEBUG log only).
-- When **`security.audit.url`** is set, the HTTP implementation POSTs both ACCESS_DENIED and RATE_LIMIT_EXCEEDED events to that URL. IDS or audit-log can consume the same endpoint.
+## 9. Input Validation
 
-### 6.5 Implementation notes
+`InputValidationFilter` scans query parameters and headers, excluding `Authorization`.
 
-- Rate limiting uses an **in-memory** store (per gateway instance). With multiple gateway instances, limits are **per instance**, not global.
-- **X-Forwarded-For**: When the gateway is behind a proxy, the first value in the header is used as the client IP. Document trust boundaries (e.g. only trust when the gateway is not directly exposed) to avoid spoofing.
+Suspicious SQLi/XSS-like values:
 
-### 6.6 Anti-bruteforce by IP (T1.6)
+- Return `400 Bad Request`.
+- Do not reach the backend.
+- Emit `SUSPICIOUS_INPUT` when audit/IDS is configured.
 
-In addition to **per-account** lock in auth-service (N failed passwords → temporary account lock, see auth-service docs), the gateway applies **per-IP** anti-bruteforce on the login path:
+Configuration:
 
-- **Counter per IP**: Each **401** or **423** response from auth-service for `POST /api/auth/login` is counted per client IP (same resolution as rate limit: `X-Forwarded-For` or remote address).
-- **TTL block**: After **N** failures (configurable, default 5), that IP is **blocked** for a duration (default 15 minutes). During the block, further POSTs to the login path receive **423 Locked** with body `{"error":"Too many login attempts. Try again later."}` without calling auth-service.
-- **Event**: When an IP is first blocked (count reaches N), a **RATE_LIMIT_EXCEEDED**-style event with key type **BRUTEFORCE_IP** is sent (same `security.audit.url` as other events).
+| Property | Default |
+|----------|---------|
+| `input-validation.enabled` | `true` |
+| `input-validation.excluded-paths` | `/actuator/health` |
 
-**Configuration** (`application.yml` / env):
+See [VALIDATION-SCHEMAS.md](VALIDATION-SCHEMAS.md).
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `bruteforce-ip.max-failed-attempts` | Failed logins (401/423) before block | 5 |
-| `bruteforce-ip.lockout-duration-minutes` | Block duration in minutes | 15 |
-| `bruteforce-ip.login-path` | Path that triggers counting | `/api/auth/login` |
+## 10. Secure Headers
 
-Env vars: `BRUTEFORCE_IP_MAX_FAILED_ATTEMPTS`, `BRUTEFORCE_IP_LOCKOUT_DURATION_MINUTES`, `BRUTEFORCE_IP_LOGIN_PATH`.
+The gateway uses Spring Cloud Gateway `SecureHeaders`.
 
-**Filter order**: **BruteforceByIpFilter** runs with order **-92** (after AuthenticationFilter -100, before RateLimitFilter -90). Only requests to the configured login path (POST) are subject to block and count.
+Typical headers:
 
----
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy`
+- `Content-Security-Policy`
+- `X-Download-Options`
+- `X-Permitted-Cross-Domain-Policies`
+- `Strict-Transport-Security` when HTTPS/HSTS is enabled
 
-## 7. Strict input validation (US1.6 / T1.7)
+Verify:
 
-The gateway applies **validation middleware** (T1.7) that enforces **validation schemas** and **rejects invalid requests** with **400 Bad Request**. See **[VALIDATION-SCHEMAS.md](VALIDATION-SCHEMAS.md)** for the full definition of schemas and middleware. Suspicious inputs (SQLi, XSS) receive **400** and trigger a **SUSPICIOUS_INPUT** event for IDS.
+```bash
+curl -I http://localhost:8080/api/patients/1
+```
 
-### 7.1 Validation schemas (T1.7)
+## 11. Audit And IDS Events
 
-- **Injection schema** (gateway): Blocklist of patterns by category (SQLI, XSS) applied to query and header values. Defined in [VALIDATION-SCHEMAS.md](VALIDATION-SCHEMAS.md); implemented in `InjectionPatterns`.
-- **Structural schema** (services): Request body and field formats are validated in each microservice via **Bean Validation** (`@Valid`, `@NotBlank`, etc.) on DTOs. Controllers return **400** for `MethodArgumentNotValidException`.
+Configure:
 
-### 7.2 Scope and behaviour
+```yaml
+security:
+  audit:
+    url: http://security-audit-log:8080/api/events
+  ids:
+    url: http://ids-service:8080/api/events
+```
 
-- **Scanned**: All query parameter values and all header values except `Authorization`.
-- **Body**: Not inspected in the gateway in the current implementation (no body buffering).
-- **When a pattern matches**: The gateway responds with **400 Bad Request**, **`Content-Type: application/json`**, and body: `{"error":"Invalid or suspicious input"}`. The request is **not** proxied. A **SUSPICIOUS_INPUT** audit event is sent (see below). The response does **not** reveal which pattern matched.
-- **Excluded paths**: Same as rate limit, e.g. `/actuator/health`; configurable via `input-validation.excluded-paths`.
+Gateway events:
 
-**Filter order**: **InputValidationFilter** runs with order **-80**, i.e. after **RateLimitFilter** (-90) and before **RbacAuthorizationFilter** (-50).
+- `ACCESS_DENIED`
+- `RATE_LIMIT_EXCEEDED`
+- `SUSPICIOUS_INPUT`
+- `PATIENT_SELF_DELETION_REQUESTED`
 
-### 7.3 Configuration
+See [../AUDIT-IDS-EVENTS.md](../AUDIT-IDS-EVENTS.md).
 
-In `application.yml`:
+## 12. Filter Order
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `input-validation.enabled` | Enable/disable the input validation filter | `true` |
-| `input-validation.excluded-paths` | Path prefixes that skip injection checks | `/actuator/health` |
+| Filter | Order |
+|--------|-------|
+| `AuthenticationFilter` | `-100` |
+| `BruteforceByIpFilter` | `-92` |
+| `RateLimitFilter` | `-90` |
+| `InputValidationFilter` | `-80` |
+| `RbacAuthorizationFilter` | `-50` |
 
-Example env var: `INPUT_VALIDATION_ENABLED`.
+## 13. Tests
 
-### 7.4 SUSPICIOUS_INPUT event (IDS)
+Run gateway tests:
 
-Each 400 from the input validation filter triggers a **SUSPICIOUS_INPUT** event. The payload contains **no PII** and no raw input value (suitable for IDS).
+```bash
+cd gateway-service
+mvn test
+```
 
-| Field | Description |
-|-------|-------------|
-| `eventType` | `"SUSPICIOUS_INPUT"` |
-| `timestamp` | ISO-8601 instant |
-| `source` | `"query"` or `"header"` (where the pattern was detected) |
-| `path` | Request path (e.g. `/api/patients/search`) |
-| `method` | HTTP method (e.g. `GET`) |
-| `category` | `"SQLI"` or `"XSS"` (detection category) |
+Important test areas:
 
-**Sending the event**
+- Authentication filter.
+- JWT verification with HS256 and RS256.
+- RBAC service and filter.
+- Rate-limit store and filter.
+- IP anti-bruteforce store and filter.
+- Input validation patterns and filter.
+- Audit sender implementations.
+- Route configuration integration test.
 
-- The same **no-op** / **HTTP** behaviour as for ACCESS_DENIED and RATE_LIMIT_EXCEEDED applies: when **`security.audit.url`** is set, the gateway POSTs SUSPICIOUS_INPUT to that URL (fire-and-forget).
+## 14. End-To-End Checks
 
----
+Without token:
 
-## 8. Security response headers (US1.7 / T1.8)
+```bash
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/patients/1
+# Expected: 401
+```
 
-The gateway adds **security headers** (T1.8 – *headers présents*) to all responses (gateway-generated and proxied) using Spring Cloud Gateway’s built-in **SecureHeaders** filter applied via `default-filters`. Every client-facing response includes the required headers.
+With token:
 
-### 8.1 Headers added
+```bash
+curl -H "Authorization: Bearer <accessToken>" http://localhost:8080/api/patients/1
+```
 
-| Header | Value | Description |
-|--------|--------|-------------|
-| **X-Content-Type-Options** | `nosniff` | Prevents MIME-type sniffing (T1.8 / US1.7). |
-| **X-Frame-Options** | `DENY` | Prevents clickjacking (T1.8 / US1.7). |
-| **Strict-Transport-Security** (HSTS) | `max-age=...` | Enforces HTTPS on subsequent visits (T1.8 / US1.7). Sent only when not disabled (see below). |
-| X-XSS-Protection | `1; mode=block` | Legacy XSS filter hint. |
-| Referrer-Policy | `no-referrer` | Controls referrer information. |
-| Content-Security-Policy | (default) | Restricts resource loading. |
-| X-Download-Options | `noopen` | Prevents opening downloads in browser context. |
-| X-Permitted-Cross-Domain-Policies | `none` | Restricts cross-domain policy. |
+Suspicious query:
 
-### 8.2 Implementation and configuration
+```bash
+curl -s -o /dev/null -w "%{http_code}" "http://localhost:8080/api/patients/search?query=OR%201=1"
+# Expected: 400
+```
 
-- **Implementation**: In `application.yml`, `spring.cloud.gateway.default-filters` includes `SecureHeaders`, so the filter runs for every route. No custom Java filter is required.
-- **HSTS when SSL is disabled**: By default, **Strict-Transport-Security** is **disabled** via `spring.cloud.gateway.filter.secure-headers.disable: strict-transport-security` so that when the gateway serves HTTP (e.g. local/dev), HSTS is not sent. When you enable HTTPS (e.g. in production), remove `strict-transport-security` from the `disable` list (or override in a profile) so that HSTS is sent.
-- **Customisation**: Header values can be overridden under `spring.cloud.gateway.filter.secure-headers` (e.g. `strict-transport-security`, `frame-options`, `content-type-options`). See [SecureHeaders GatewayFilter Factory](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/gatewayfilter-factories/secureheaders-factory.html).
+HTTPS:
 
-### 8.3 Verification
-
-- **Manual**: `curl -I http://localhost:8080/api/patients/1` — expect 401 with `X-Content-Type-Options`, `X-Frame-Options` (and other secure headers). HSTS will be absent when the default config disables it.
-
----
-
-## 9. Event emission – audit and IDS (T1.9)
-
-The gateway **emits events** toward **security-audit-log** and **ids-service** (API). Event **format** is defined in **[AUDIT-IDS-EVENTS.md](AUDIT-IDS-EVENTS.md)**.
-
-- **security.audit.url**: When set, all events (ACCESS_DENIED, RATE_LIMIT_EXCEEDED, SUSPICIOUS_INPUT) are POSTed to this URL (JSON body, fire-and-forget).
-- **security.ids.url** (optional): When set, **RATE_LIMIT_EXCEEDED** and **SUSPICIOUS_INPUT** are also POSTed to this URL (same payload as audit). Use for ids-service when deployed separately from security-audit-log.
-
-If neither URL is set, the no-op implementation is used (no network calls). See AUDIT-IDS-EVENTS.md for the exact JSON structure of each event type.
-
----
-
-## 10. Routing configuration
-
-The main routes are defined in `application.yml`:
-
-- `/api/auth/**` → `lb://auth-service`
-- `/api/patients/**` → `lb://patient-service`
-- `/api/staff/**` → `lb://staff-service`
-- `/api/appointments/**` → `lb://appointment-service`
-- `/api/medical-records/**` → `lb://medical-record-service`
-- `/api/consultations/**` → `lb://consultations-service`
-
-This ensures that the public API surface of the KIT COMMUN is exposed consistently
-through the gateway without changing the downstream endpoints.
-
----
-
-## 11. Tests (T1.10)
-
-Unit and integration tests for **JWT**, **RBAC**, **rate limit**, **bruteforce**, and **validation**; all tests passants. Run with `mvn test` in `gateway-service`.
-
-**Unit tests**: JWT (verification HS256/RS256), RBAC (policy + filter), rate limit (store + filter), anti-bruteforce by IP (store + filter), input validation (patterns + filter), authentication filter, audit senders. **Integration**: Gateway context + routes (GatewayRoutesConfigTest).
-
-Main test classes:
-
-1. **AuthenticationFilterTest**
-   - Public paths (`/api/auth/login`, `/api/auth/register`, `/api/auth/refresh`,
-     `/actuator/health`) are allowed without a token; `chain.filter` is called.
-   - Private path without token → **401**, `chain.filter` not called.
-   - Private path with invalid or malformed token → **401**, `chain.filter` not called.
-   - Private path with valid token (mocked claims) → `chain.filter` called with mutated request containing `X-User-Id`, `X-Username`, `X-User-Roles`.
-
-2. **RbacServiceTest** / **RbacAuthorizationFilterTest**
-   - RBAC service: path outside patient resources → allowed; allowed role on patient path → allowed; disallowed role (e.g. PATIENT on GET `/api/patients`) → denied; `resolveResource`, `resolveAction`, `extractResourceId` behaviour.
-   - RBAC filter: path out of scope → chain called; allowed role on patient path → chain called, no 403; denied role → 403, JSON body `{"error":"Forbidden"}`, chain not called, `SecurityAuditSender.sendAccessDenied` invoked (mock). No `X-Username` on patient path → chain called (RBAC skips).
-
-3. **RateLimitStoreTest** / **RateLimitFilterTest**
-   - Rate limit store: under limit → allowed; over limit in window → denied; different keys independent; after window expires → allowed again.
-   - Rate limit filter: excluded path → chain called, no quota consumed; under limit → chain called; over IP limit → 429, JSON body, `SecurityAuditSender.sendRateLimitExceeded` invoked with keyType IP; over user limit (with `X-User-Id`) → 429, audit with keyType USER.
-
-4. **InjectionPatternsTest** / **InputValidationFilterTest**
-   - Injection patterns: known SQLi (e.g. `OR 1=1`, `UNION SELECT`) → match SQLI; known XSS (e.g. `<script>`, `javascript:`) → match XSS; safe input → no match.
-   - Input validation filter: excluded path → chain called; suspicious query param → 400, JSON body, `SecurityAuditSender.sendSuspiciousInput` invoked with source=query, category=SQLI or XSS; suspicious header → 400, audit with source=header; safe input → chain called; disabled → chain called even with suspicious input.
-
-5. **JwtVerificationServiceTest** / **JwtVerificationServiceRs256Test**
-   - HS256: valid token → claims; expired/malformed/wrong secret → empty; null/blank → empty.
-   - RS256: valid token with public key → claims; token signed with other key → empty.
-
-6. **BruteforceByIpStoreTest** / **BruteforceByIpFilterTest**
-   - Store: under N failures → not blocked; N failures → blocked; different IPs independent.
-   - Filter: non-login path → chain called; POST login 401 → recordFailure, audit on Nth; IP blocked → 423 without chain.
-
-7. **GatewayRoutesConfigTest** (integration)
-   - Spring Boot test that starts the gateway context and autowires the `RouteLocator`.
-   - Verifies that the gateway defines routes for **all** core KIT COMMUN services:
-     `auth-service`, `patient-service`, `staff-service`,
-     `appointment-service`, `medical-record-service`, `consultations-service`.
-
-8. **NoOpSecurityAuditSenderTest** / **HttpSecurityAuditSenderTest**
-   - No-op: methods do not throw. HTTP: POST payload shape and URL for audit/IDS events.
-
-These tests ensure that:
-
-- The gateway intercepts and filters all traffic.
-- All API paths of the KIT COMMUN are reachable **through** the gateway configuration.
-
-For full end-to-end verification in Docker:
-
-1. Start the stack with `docker-compose up -d --build`.
-2. **Without a token**, a protected path must return 401:
-   ```bash
-   curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/patients/1
-   # Expect 401
-   ```
-3. **With a valid token** (obtain via `POST http://localhost:8080/api/auth/login`), the same path should be forwarded and return 200 or 404 from the backend; if the user’s role is not allowed for that action on a patient-dossier path, the gateway returns **403** (no call to the backend) and emits an ACCESS_DENIED audit event. If the client or user exceeds the rate limit, the gateway returns **429** and emits a RATE_LIMIT_EXCEEDED event. If a query or header contains SQLi/XSS-like patterns (e.g. `?query=OR 1=1`), the gateway returns **400** and emits a SUSPICIOUS_INPUT event.
-   ```bash
-   curl -H "Authorization: Bearer <accessToken>" http://localhost:8080/api/patients/1
-   ```
-4. Verify that there is **no direct access** to the microservices on ports 8081–8086 from the host (connections should fail), confirming that all external traffic must go through the gateway.
-
+```bash
+curl -k https://localhost:8080/actuator/health
+# Expected: 200
+```

@@ -1,86 +1,207 @@
-# RGPD / HIPAA Compliance – Modèle de consentement et traçabilité
+# GDPR / HIPAA Compliance Notes
 
-Ce document décrit le modèle de consentement, les bases légales et la traçabilité pour la conformité RGPD et HIPAA du KIT COMMUN.
+This document describes the project-level consent model, legal bases, audit trail, and data-subject workflows implemented in the hospital patient microservices platform.
 
----
+The file name keeps the original French acronym `RGPD`, but the content is written in English. GDPR is the European data-protection regulation; HIPAA is referenced as a healthcare-security benchmark for protected health information.
 
-## 1. Modèle de consentement
+## 1. Scope
 
-### 1.1 Champs du modèle
+The compliance notes cover:
 
-| Champ | Description | Valeurs |
-|-------|-------------|---------|
-| `consentGiven` | Indique si le patient a donné son consentement au traitement des données | `true` / `false` |
-| `legalBasis` | Base légale du traitement (RGPD Art. 6) | `consent`, `legitimate_interest`, `contract`, `withdrawn`, etc. |
+- Patient identity and demographic data managed by `patient-service`.
+- Medical records and entries managed by `medical-record-service`.
+- Consultations managed by `consultations-service`.
+- Appointments managed by `appointment-service`.
+- User accounts and authentication data managed by `auth-service`.
+- Gateway-level access control, security events, and filtering.
 
-### 1.2 Valeur par défaut à la création
+The implementation avoids placing raw PII/PHI in audit and IDS events. Event payloads contain technical identifiers such as `patientId`, `resourceId`, and `userId`.
 
-Lors de la création d’un patient, si `legalBasis` n’est pas fourni, la valeur par défaut est **`consent`**. Cela garantit qu’un patient nouvellement créé a une base légale explicite.
+## 2. Consent Model
 
-### 1.3 Retrait du consentement (T1.19)
+Patient records include consent-related fields:
 
-Le flux `withdrawConsent` :
+| Field | Purpose | Typical Values |
+|-------|---------|----------------|
+| `consentGiven` | Indicates whether the patient has consented to data processing | `true`, `false` |
+| `legalBasis` | Legal basis for processing under GDPR Article 6 | `consent`, `legitimate_interest`, `contract`, `legal_obligation`, `withdrawn` |
 
-1. Met `consentGiven` à `false`
-2. Met `legalBasis` à `"withdrawn"`
-3. Émet un événement **PHI_ACCESS** (action `UPDATE`) pour l’audit
-4. Retourne le patient mis à jour
+When a patient is created and no `legalBasis` is provided, the service defaults it to `consent`. This ensures every patient record starts with an explicit processing basis.
 
-**Comportement métier après retrait :**
+## 3. Consent Withdrawal
 
-- Les traitements basés uniquement sur le consentement doivent être arrêtés.
-- Les données déjà collectées peuvent être conservées si une autre base légale s’applique (ex. obligation légale, intérêt légitime).
-- Le droit à l’effacement (Art. 17 RGPD) peut être exercé via `DELETE /api/patients/{id}` (avec RBAC approprié).
+`patient-service` exposes:
 
----
+```http
+PUT /api/patients/{id}/consent/withdraw
+```
 
-## 2. Bases légales (RGPD Art. 6)
+The withdrawal flow:
 
-| Base | Usage typique |
-|------|----------------|
-| `consent` | Traitement explicite des données de santé avec accord du patient |
-| `legitimate_interest` | Intérêt légitime de l’établissement (ex. continuité des soins) |
-| `contract` | Exécution d’un contrat (ex. assurance) |
-| `legal_obligation` | Obligations légales (déclarations, archivage) |
-| `withdrawn` | Consentement retiré – arrêt des traitements basés sur le consentement |
+1. Sets `consentGiven` to `false`.
+2. Sets `legalBasis` to `withdrawn`.
+3. Emits a `PHI_ACCESS` audit event with action `UPDATE`.
+4. Returns the updated patient DTO.
 
----
+After consent is withdrawn, processing that relies only on consent should stop. Data already collected may still be retained when another lawful basis applies, such as legal obligation, continuity of care, or retention requirements.
 
-## 3. Traçabilité pour le DPO
+## 4. Legal Bases
 
-### 3.1 Événements d’audit
+| Legal Basis | Typical Use |
+|-------------|-------------|
+| `consent` | Explicit patient consent for data processing |
+| `legitimate_interest` | Hospital continuity of care or operational necessity |
+| `contract` | Contractual relationship, such as insurance or service agreement |
+| `legal_obligation` | Statutory retention, reporting, or regulatory duty |
+| `withdrawn` | Consent has been withdrawn; consent-based processing must stop |
 
-Tous les accès et modifications de PHI émettent des événements d’audit (voir `AUDIT-IDS-EVENTS.md`) :
+In a production deployment, the controller/service behavior should be supported by an internal register of processing activities and policy documentation owned by the data-protection function.
 
-- **PHI_ACCESS** : lecture, création, modification de PHI
-- **PHI_DELETED** : suppression de PHI
-- **DOSSIER_ACCESSED** : accès au dossier patient (READ/EXPORT)
-- **ACCOUNT_LOCKED** : verrouillage de compte (bruteforce)
+## 5. Data-Subject Rights
 
-Les payloads ne contiennent **aucun PII** (noms, emails, diagnostics) – uniquement des identifiants techniques (patientId, userId, resourceId).
+### Right Of Access
 
-### 3.2 Retrait de consentement
+Patients and authorized staff can access an aggregated patient dossier through:
 
-Le retrait de consentement est tracé par :
+```http
+GET /api/patients/{id}/dossier
+```
 
-1. **PHI_ACCESS** (action `UPDATE`) sur la ressource `PATIENT` avec le `patientId`
-2. Le champ `legalBasis` passé à `"withdrawn"` dans la base de données
+The dossier aggregates:
 
-Le DPO peut interroger les logs d’audit pour retrouver :
+- Patient data from `patient-service`.
+- Medical record data from `medical-record-service`.
+- Consultation history from `consultations-service`.
+- Appointment data from `appointment-service`.
 
-- Qui a initié le retrait (via `X-User-Id` ou équivalent dans le contexte d’appel)
-- Quand le retrait a eu lieu (timestamp de l’événement)
-- Quel patient est concerné (resourceId = patientId)
+Access is controlled by the gateway RBAC policy. Dossier access emits a `DOSSIER_ACCESSED` event.
 
-### 3.3 Accès au dossier
+### Right To Portability / Export
 
-Les accès au dossier patient (GET `/api/patients/{id}/dossier` et export) sont tracés via **DOSSIER_ACCESSED** avec l’action `READ` ou `EXPORT`.
+The dossier can be exported as JSON:
 
----
+```http
+GET /api/patients/{id}/dossier/export
+```
 
-## 4. Recommandations
+The response is JSON and includes `Content-Disposition: attachment`.
 
-- Conserver les événements d’audit selon la politique de rétention (voir `AUDIT-IDS-EVENTS.md` ou `SECURITY-ENCRYPTION.md`).
-- Documenter les traitements (registre des activités – Art. 30 RGPD).
-- Former les équipes au respect du consentement et des bases légales.
-- Mettre en place des processus de réponse aux demandes d’accès, de rectification et d’effacement (Art. 12–17 RGPD).
+### Right To Erasure
+
+Patient deletion is available through:
+
+```http
+DELETE /api/patients/{id}
+```
+
+`patient-service` orchestrates cascade deletion across:
+
+- `medical-record-service`
+- `consultations-service`
+- `appointment-service`
+
+The gateway allows:
+
+- Admin deletion by `ROLE_ADMIN`.
+- Patient self-deletion when the requester has `ROLE_PATIENT` and the path ID matches `X-User-Id`.
+
+When self-deletion is allowed, the gateway emits `PATIENT_SELF_DELETION_REQUESTED` before proxying the request.
+
+### Account Anonymization And Deletion
+
+`auth-service` exposes:
+
+```http
+PUT /api/auth/account/{userId}/anonymize
+DELETE /api/auth/account/{userId}
+```
+
+Anonymization replaces identifying account data with non-reversible values. Deletion removes the account record when no required references remain.
+
+## 6. Retention And Purge
+
+`patient-service` contains a scheduled retention purge job:
+
+| Property | Purpose | Default |
+|----------|---------|---------|
+| `retention.patient-years` | Patient retention duration in years | `10` |
+| `retention.purge.enabled` | Enables scheduled purge | `false` |
+| `retention.purge.cron` | Purge schedule | `0 0 2 * * ?` |
+
+When enabled, the purge job deletes patients whose retention date has passed and uses the normal cascade deletion path. A `RETENTION_PURGE` event is emitted after a purge run.
+
+## 7. Auditability For DPO / Privacy Officers
+
+The system emits audit events for sensitive operations:
+
+| Event | Meaning |
+|-------|---------|
+| `PHI_ACCESS` | Successful read, create, or update of protected health information |
+| `PHI_DELETED` | Successful deletion of protected health information |
+| `DOSSIER_ACCESSED` | Patient dossier was read or exported |
+| `RETENTION_PURGE` | Scheduled retention purge completed |
+| `PATIENT_SELF_DELETION_REQUESTED` | Patient initiated deletion of their own record |
+| `ACCESS_DENIED` | Gateway RBAC denied access |
+| `RATE_LIMIT_EXCEEDED` | Rate limit or login-abuse threshold exceeded |
+| `SUSPICIOUS_INPUT` | Gateway rejected SQLi/XSS-like query or header content |
+| `ACCOUNT_LOCKED` | Auth service locked an account after repeated failed login attempts |
+
+The DPO can use these events to answer:
+
+- Who accessed a patient record or dossier.
+- When access occurred.
+- Which technical resource was affected.
+- Whether data was exported.
+- Whether deletion was initiated by an admin, retention job, or patient self-service.
+
+See [AUDIT-IDS-EVENTS.md](AUDIT-IDS-EVENTS.md) for payload definitions.
+
+## 8. PII / PHI Minimization
+
+Audit and IDS payloads must not include:
+
+- Patient names.
+- Email addresses.
+- Phone numbers.
+- Diagnoses.
+- Prescriptions.
+- Notes.
+- Raw request payloads.
+- Suspicious raw input strings.
+
+They may include:
+
+- Technical user IDs.
+- Resource IDs.
+- Patient IDs.
+- Action types.
+- Event categories.
+- Timestamps.
+
+## 9. Security Controls Supporting Compliance
+
+The gateway and services provide:
+
+- JWT authentication.
+- Gateway RBAC before backend proxying.
+- Secure response headers.
+- Gateway rate limiting.
+- Account and IP anti-bruteforce controls.
+- Query/header input validation.
+- Optional audit and IDS event delivery.
+- HTTPS support at the gateway.
+- Per-service database isolation.
+
+See [SECURITY-ENCRYPTION.md](SECURITY-ENCRYPTION.md) and [gateway-service/GATEWAY-HTTPS.md](gateway-service/GATEWAY-HTTPS.md).
+
+## 10. Production Recommendations
+
+- Replace development secrets with a secrets manager.
+- Prefer RS256 JWT signing with private key in `auth-service` and public key in `gateway-service`.
+- Enable HTTPS with a trusted certificate.
+- Encrypt database volumes or use managed PostgreSQL encryption at rest.
+- Configure `security.audit.url` and `security.ids.url` to durable storage.
+- Define retention policies for audit logs and backups.
+- Use database migrations instead of `ddl-auto: update` in production.
+- Document processing activities under GDPR Article 30.
+- Add operational runbooks for access requests, rectification, export, deletion, and incident response.

@@ -1,202 +1,247 @@
-# Audit & IDS Events (Security)
+# Audit And IDS Event Reference
 
-This document describes the security audit and IDS event formats used across the hospital platform.
+This document defines the audit and intrusion-detection event payloads used by the platform. Events are designed for security monitoring and privacy traceability while avoiding raw PII/PHI in payloads.
 
 ## Configuration
 
-- **Gateway and PHI services:** Set `security.audit.url` to the audit log endpoint to enable sending events. When not set, implementations are no-op (no network calls).
-- **Gateway only:** Optionally set `security.ids.url` so that RATE_LIMIT_EXCEEDED and SUSPICIOUS_INPUT are also sent to the IDS.
+| Setting | Used By | Description |
+|---------|---------|-------------|
+| `security.audit.url` | Gateway and PHI services | HTTP endpoint that receives audit events. When unset, senders are no-op. |
+| `security.ids.url` | Gateway | Optional IDS endpoint. Receives IDS-oriented events such as `RATE_LIMIT_EXCEEDED` and `SUSPICIOUS_INPUT`. |
 
----
+Events are sent as JSON with fire-and-forget behavior. Delivery failures are logged and do not change the client response.
 
-## PHI_DELETED (T6.3)
+## Privacy Rules
 
-Emitted by PHI services after a **successful** DELETE of protected health information. No PII/PHI is included in the payload.
+Events must not contain:
 
-| Field         | Type   | Description |
-|---------------|--------|-------------|
-| `eventType`   | string | Always `"PHI_DELETED"` |
-| `timestamp`   | string | ISO-8601 instant (e.g. `2025-02-17T10:30:00.123Z`) |
-| `resourceType`| string | One of: `PATIENT`, `MEDICAL_RECORD`, `CONSULTATION`, `APPOINTMENT` |
-| `resourceId`  | string | Identifier of the deleted resource (e.g. patient ID or record ID). No PII. |
+- Patient names, addresses, phone numbers, or emails.
+- Diagnoses, prescriptions, notes, or medical details.
+- Raw request bodies.
+- Raw suspicious input strings.
+- Passwords, tokens, refresh tokens, or secrets.
 
-**Example payload:**
+Events may contain:
 
-```json
-{
-  "eventType": "PHI_DELETED",
-  "timestamp": "2025-02-17T10:30:00.123Z",
-  "resourceType": "MEDICAL_RECORD",
-  "resourceId": "100"
-}
-```
+- Technical user IDs.
+- Resource IDs.
+- Patient IDs.
+- HTTP method/path metadata.
+- Action names.
+- Event categories.
+- Timestamps.
 
-**When it is sent:**
+## PHI_ACCESS
 
-- **medical-record-service:** After successful DELETE by patient (delete of medical record for a patient).
-- **consultations-service:** After successful DELETE by patient (delete of all consultations for a patient).
-- **appointment-service:** After successful DELETE by patient (delete of all appointments for a patient).
-- **patient-service:** After successful deletion of a patient (after cascade and local delete).
+Emitted after a successful read, create, or update of protected health information.
 
-Implementations are fire-and-forget; failures to send are logged and do not affect the HTTP response.
+| Field | Type | Description |
+|-------|------|-------------|
+| `eventType` | string | Always `PHI_ACCESS` |
+| `timestamp` | string | ISO-8601 instant |
+| `resourceType` | string | `PATIENT`, `MEDICAL_RECORD`, `CONSULTATION`, or `APPOINTMENT` |
+| `resourceId` | string | Technical resource identifier |
+| `action` | string | `READ`, `CREATE`, or `UPDATE` |
 
----
-
-## DOSSIER_ACCESSED (T6.8)
-
-Emitted by **patient-service** when a patient dossier is successfully **read** (GET `/api/patients/{id}/dossier`) or **exported** (GET `/api/patients/{id}/dossier/export`). No PII/PHI is included in the payload; used for audit trail of access to PHI.
-
-| Field          | Type   | Description |
-|----------------|--------|-------------|
-| `eventType`    | string | Always `"DOSSIER_ACCESSED"` |
-| `timestamp`   | string | ISO-8601 instant |
-| `resourceType`| string | Always `"PATIENT_DOSSIER"` |
-| `resourceId`  | string | Patient ID (no PII). |
-| `action`       | string | `"READ"` for dossier view, `"EXPORT"` for dossier download |
-
-**Example payload (read):**
-
-```json
-{
-  "eventType": "DOSSIER_ACCESSED",
-  "timestamp": "2025-02-17T10:35:00.000Z",
-  "resourceType": "PATIENT_DOSSIER",
-  "resourceId": "42",
-  "action": "READ"
-}
-```
-
-**When it is sent:**
-
-- **patient-service:** After a successful response for GET `/api/patients/{id}/dossier` (action READ) or GET `/api/patients/{id}/dossier/export` (action EXPORT). Not sent when the patient is not found (404).
-
-Implementations are fire-and-forget; failures to send are logged and do not affect the HTTP response.
-
----
-
-## PHI_ACCESS (T1.14)
-
-Emitted by PHI services after a **successful** READ, CREATE or UPDATE of protected health information. No PII/PHI is included in the payload.
-
-| Field          | Type   | Description |
-|----------------|--------|-------------|
-| `eventType`    | string | Always `"PHI_ACCESS"` |
-| `timestamp`    | string | ISO-8601 instant |
-| `resourceType` | string | One of: `PATIENT`, `MEDICAL_RECORD`, `CONSULTATION`, `APPOINTMENT` |
-| `resourceId`   | string | Identifier of the resource (no PII). |
-| `action`       | string | `"READ"`, `"CREATE"` or `"UPDATE"` |
-
-**Example payload:**
+Example:
 
 ```json
 {
   "eventType": "PHI_ACCESS",
-  "timestamp": "2025-02-17T10:40:00.000Z",
+  "timestamp": "2026-05-28T10:40:00.000Z",
   "resourceType": "PATIENT",
   "resourceId": "42",
   "action": "READ"
 }
 ```
 
-**When it is sent:**
+Typical emitters:
 
-- **patient-service:** After create (CREATE), getById/getByNationalId (READ), update (UPDATE).
-- **medical-record-service:** After create (CREATE), getById/getByPatientId (READ), update (UPDATE).
-- **consultations-service:** After create (CREATE), getById (READ), update (UPDATE).
-- **appointment-service:** After create (CREATE), getById (READ), update (UPDATE).
+- `patient-service`
+- `medical-record-service`
+- `consultations-service`
+- `appointment-service`
 
-Implementations are fire-and-forget; failures to send are logged and do not affect the HTTP response.
+## PHI_DELETED
 
----
+Emitted after successful deletion of protected health information.
 
-## PATIENT_SELF_DELETION_REQUESTED (T6.11)
-
-Emitted by the **gateway** when a user with **ROLE_PATIENT** is **allowed** to DELETE their own patient record (`DELETE /api/patients/{id}` where id = user id). Lets the audit log distinguish patient-initiated deletion (right to erasure) from admin-initiated deletion. No PII in the payload.
-
-| Field          | Type   | Description |
-|----------------|--------|-------------|
-| `eventType`    | string | Always `"PATIENT_SELF_DELETION_REQUESTED"` |
-| `timestamp`    | string | ISO-8601 instant |
-| `resourceType` | string | Always `"PATIENTS"` |
-| `resourceId`   | string | Patient ID from the path (no PII). |
-
-**When it is sent:** Immediately when the gateway allows the request (before proxying to patient-service). Not sent when the requester is ADMIN or when the request is denied (e.g. PATIENT trying to delete another patient).
-
----
-
-## RETENTION_PURGE (T1.18)
-
-Emitted by **patient-service** after a scheduled retention purge run. No PII in the payload.
-
-| Field          | Type   | Description |
-|----------------|--------|-------------|
-| `eventType`    | string | Always `"RETENTION_PURGE"` |
-| `timestamp`    | string | ISO-8601 instant |
-| `resourceType` | string | Always `"PATIENT"` |
-| `purgedCount`  | number | Number of patient records purged |
-
-**When it is sent:** After `RetentionPurgeJob` completes (when `retention.purge.enabled` is true). One event per run with the count of successfully purged patients.
-
----
-
-## Gateway-only events (reference)
-
-These are sent by the gateway when `security.audit.url` is set.
-
-### ACCESS_DENIED
-
-| Field          | Type   | Description |
-|----------------|--------|-------------|
-| `eventType`    | string | `"ACCESS_DENIED"` |
-| `timestamp`    | string | ISO-8601 instant |
-| `userId`       | string | User identifier (pseudonymised) |
-| `resourceType` | string | Resource from RBAC (e.g. PATIENT, APPOINTMENT) |
-| `resourceId`   | string | Resource ID when applicable |
-| `action`       | string | Action denied (e.g. READ, DELETE) |
-| `reason`       | string | e.g. `"RBAC_DENY"` |
-
-### RATE_LIMIT_EXCEEDED
-
-| Field          | Type   | Description |
-|----------------|--------|-------------|
-| `eventType`    | string | `"RATE_LIMIT_EXCEEDED"` |
-| `timestamp`    | string | ISO-8601 instant |
-| `keyType`      | string | `"IP"` or `"USER"` |
-| `key`          | string | Identifier (no PII) |
-| `limit`        | number | Configured limit |
-| `windowSeconds`| number | Time window in seconds |
-
-### SUSPICIOUS_INPUT
-
-| Field       | Type   | Description |
-|-------------|--------|-------------|
-| `eventType` | string | `"SUSPICIOUS_INPUT"` |
+| Field | Type | Description |
+|-------|------|-------------|
+| `eventType` | string | Always `PHI_DELETED` |
 | `timestamp` | string | ISO-8601 instant |
-| `source`    | string | `"query"`, `"header"`, or `"body"` |
-| `path`      | string | Request path |
-| `method`    | string | HTTP method |
-| `category`  | string | `"SQLI"` or `"XSS"` |
+| `resourceType` | string | `PATIENT`, `MEDICAL_RECORD`, `CONSULTATION`, or `APPOINTMENT` |
+| `resourceId` | string | Deleted resource identifier |
 
----
+Example:
 
-## Rétention des logs d'audit et IDS (T2.4)
+```json
+{
+  "eventType": "PHI_DELETED",
+  "timestamp": "2026-05-28T10:30:00.123Z",
+  "resourceType": "MEDICAL_RECORD",
+  "resourceId": "100"
+}
+```
 
-### Politique de rétention recommandée
+## DOSSIER_ACCESSED
 
-| Type d'événement | Rétention recommandée | Action après délai |
-|------------------|------------------------|--------------------|
-| PHI_ACCESS, PHI_DELETED, DOSSIER_ACCESSED | 1 an (RGPD/HIPAA) | Purge ou anonymisation |
-| RATE_LIMIT_EXCEEDED, SUSPICIOUS_INPUT, ACCESS_DENIED | 90 jours | Purge |
-| ACCOUNT_LOCKED | 1 an | Purge ou archivage |
-| RETENTION_PURGE | 1 an | Archivage pour conformité |
+Emitted by `patient-service` after a successful dossier read or export.
 
-### Implémentation
+| Field | Type | Description |
+|-------|------|-------------|
+| `eventType` | string | Always `DOSSIER_ACCESSED` |
+| `timestamp` | string | ISO-8601 instant |
+| `resourceType` | string | Always `PATIENT_DOSSIER` |
+| `resourceId` | string | Patient ID |
+| `action` | string | `READ` or `EXPORT` |
 
-- Les événements sont envoyés à `security.audit.url` (et optionnellement `security.ids.url`).
-- La rétention et la purge sont gérées par le système de stockage (ELK, Splunk, base dédiée).
-- **ELK / OpenSearch** : Configurer l’**Index Lifecycle Management (ILM)** pour appliquer une politique de rétention (ex. `delete` après 90 jours ou 1 an selon le type d’index).
-- **Exemple ILM** : `hot` 7 jours → `warm` 83 jours → `delete` à 90 jours pour les événements IDS ; 365 jours pour les événements PHI.
+Example:
 
-### Référence DPO
+```json
+{
+  "eventType": "DOSSIER_ACCESSED",
+  "timestamp": "2026-05-28T10:35:00.000Z",
+  "resourceType": "PATIENT_DOSSIER",
+  "resourceId": "42",
+  "action": "EXPORT"
+}
+```
 
-Le DPO peut s’appuyer sur ces événements pour tracer les accès aux données personnelles et répondre aux demandes d’accès, de rectification et d’effacement (Art. 12–17 RGPD).
+## PATIENT_SELF_DELETION_REQUESTED
+
+Emitted by the gateway when a `ROLE_PATIENT` user is allowed to delete their own patient record.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `eventType` | string | Always `PATIENT_SELF_DELETION_REQUESTED` |
+| `timestamp` | string | ISO-8601 instant |
+| `resourceType` | string | Always `PATIENTS` |
+| `resourceId` | string | Patient ID from the request path |
+
+This event is not emitted for admin deletion and is not emitted when self-deletion is denied.
+
+## RETENTION_PURGE
+
+Emitted by `patient-service` after a scheduled retention purge run.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `eventType` | string | Always `RETENTION_PURGE` |
+| `timestamp` | string | ISO-8601 instant |
+| `resourceType` | string | Always `PATIENT` |
+| `purgedCount` | number | Number of patient records purged |
+
+Example:
+
+```json
+{
+  "eventType": "RETENTION_PURGE",
+  "timestamp": "2026-05-28T02:00:00.000Z",
+  "resourceType": "PATIENT",
+  "purgedCount": 3
+}
+```
+
+## ACCOUNT_LOCKED
+
+Emitted by `auth-service` when an account is temporarily locked after repeated failed login attempts.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `eventType` | string | Always `ACCOUNT_LOCKED` |
+| `timestamp` | string | ISO-8601 instant |
+| `userId` | string | Technical user ID |
+| `username` | string | Login identifier |
+| `reason` | string | Usually `BRUTEFORCE` |
+
+## ACCESS_DENIED
+
+Emitted by the gateway when RBAC denies a request.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `eventType` | string | Always `ACCESS_DENIED` |
+| `timestamp` | string | ISO-8601 instant |
+| `userId` | string | Technical user ID from JWT |
+| `resourceType` | string | `PATIENTS`, `MEDICAL_RECORDS`, `CONSULTATIONS`, or `APPOINTMENTS` |
+| `resourceId` | string | Resource ID from the path when available |
+| `action` | string | `READ`, `CREATE`, `UPDATE`, or `DELETE` |
+| `reason` | string | Usually `RBAC_DENY` |
+
+Example:
+
+```json
+{
+  "eventType": "ACCESS_DENIED",
+  "timestamp": "2026-05-28T12:00:00Z",
+  "userId": "42",
+  "resourceType": "PATIENTS",
+  "resourceId": "1",
+  "action": "DELETE",
+  "reason": "RBAC_DENY"
+}
+```
+
+## RATE_LIMIT_EXCEEDED
+
+Emitted by the gateway when per-IP, per-user, or login-abuse limits are exceeded.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `eventType` | string | Always `RATE_LIMIT_EXCEEDED` |
+| `timestamp` | string | ISO-8601 instant |
+| `keyType` | string | `IP`, `USER`, or `BRUTEFORCE_IP` |
+| `key` | string | Client IP or technical user ID |
+| `limit` | number | Configured limit |
+| `windowSeconds` | number | Window or lockout duration in seconds |
+
+Example:
+
+```json
+{
+  "eventType": "RATE_LIMIT_EXCEEDED",
+  "timestamp": "2026-05-28T12:00:00Z",
+  "keyType": "BRUTEFORCE_IP",
+  "key": "192.168.1.1",
+  "limit": 5,
+  "windowSeconds": 900
+}
+```
+
+## SUSPICIOUS_INPUT
+
+Emitted by the gateway when query parameters or headers match SQLi/XSS-like patterns.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `eventType` | string | Always `SUSPICIOUS_INPUT` |
+| `timestamp` | string | ISO-8601 instant |
+| `source` | string | `query` or `header` |
+| `path` | string | Request path |
+| `method` | string | HTTP method |
+| `category` | string | `SQLI` or `XSS` |
+
+Example:
+
+```json
+{
+  "eventType": "SUSPICIOUS_INPUT",
+  "timestamp": "2026-05-28T12:00:00Z",
+  "source": "query",
+  "path": "/api/patients/search",
+  "method": "GET",
+  "category": "SQLI"
+}
+```
+
+## Retention Recommendations
+
+| Event Type | Suggested Retention | After Retention |
+|------------|---------------------|-----------------|
+| `PHI_ACCESS`, `PHI_DELETED`, `DOSSIER_ACCESSED` | 1 year or policy-defined healthcare audit period | Archive, anonymize, or purge |
+| `RETENTION_PURGE` | 1 year or policy-defined compliance period | Archive or purge |
+| `ACCOUNT_LOCKED` | 1 year | Purge or archive |
+| `ACCESS_DENIED`, `RATE_LIMIT_EXCEEDED`, `SUSPICIOUS_INPUT` | 90 days | Purge |
+
+In ELK/OpenSearch, implement this with Index Lifecycle Management. In Splunk or a database-backed audit service, configure equivalent retention policies.

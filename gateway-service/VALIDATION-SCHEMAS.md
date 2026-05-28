@@ -1,56 +1,99 @@
-# Validation schemas (T1.7)
+# Validation Schemas
 
-This document defines the **validation schemas** and the **middleware** that enforce them. Invalid requests are **rejected** (400 Bad Request or 422 when applicable) before or at the backend.
+This document defines the validation rules used by the platform and where they are enforced.
 
----
+## Validation Layers
 
-## 1. Schema types (équivalent JSON Schema)
+| Layer | Component | Scope | Failure Response |
+|-------|-----------|-------|------------------|
+| Gateway | `InputValidationFilter` | Query parameter values and header values except `Authorization` | `400 Bad Request` |
+| Services | Bean Validation via `@Valid` | JSON bodies, DTO fields, some path/query parameters | `400 Bad Request` |
 
-### 1.1 Injection detection schema (gateway)
+The gateway does not buffer or inspect request bodies. Body validation is handled inside each microservice.
 
-**Scope**: Query parameter values and header values (except `Authorization`).
+## Gateway Injection Detection
 
-**Definition**: A **blocklist** of pattern categories. Each string value is matched against compiled regex patterns; if any match, the request is considered **invalid**.
+The gateway scans:
 
-| Category | Description | Example patterns (conceptual) |
-|----------|-------------|-------------------------------|
-| **SQLI** | SQL injection–like sequences | `OR 1=1`, `UNION SELECT`, `; DROP`, `INSERT INTO`, `DELETE FROM`, `--`, `' OR '1'='1`, `exec(`, `char(`, etc. |
-| **XSS** | Cross-site scripting–like sequences | `<script`, `</script>`, `javascript:`, `onerror=`, `onload=`, `onclick=`, `<iframe`, `vbscript:`, `data:text/html`, etc. |
+- Query parameter values.
+- Header values, excluding `Authorization`.
 
-**Implementation**: `InjectionPatterns` (gateway) holds the compiled patterns; see `com.hospital.gateway.validation.InjectionPatterns`. Patterns are applied case-insensitively. No PII or raw payload is logged; only category (SQLI/XSS), source (query/header), path, and method are sent to the audit/IDS.
+It rejects values that match SQL injection or XSS-like patterns.
 
-**Rejection**: **400 Bad Request**, body `{"error":"Invalid or suspicious input"}`. Request is **not** proxied.
+| Category | Examples |
+|----------|----------|
+| `SQLI` | `OR 1=1`, `UNION SELECT`, `; DROP`, `INSERT INTO`, `DELETE FROM`, SQL comments, `exec(`, `char(` |
+| `XSS` | `<script`, `</script>`, `javascript:`, `onerror=`, `onload=`, `<iframe`, `vbscript:`, `data:text/html` |
 
----
+Implementation:
 
-### 1.2 Structural validation schema (services)
+```text
+gateway-service/src/main/java/com/hospital/gateway/validation/InjectionPatterns.java
+```
 
-**Scope**: Request **body** (JSON) and path/query parameters validated by each microservice.
+Patterns are matched case-insensitively.
 
-**Definition**: **Bean Validation** (JSR 380) on DTOs: `@NotNull`, `@NotBlank`, `@Size`, `@Email`, `@Pattern`, `@Valid`, etc. Each service defines its own constraints on its request DTOs (e.g. `PatientCreateRequest`, `LoginRequest`).
+## Gateway Rejection Behavior
 
-**Implementation**: Controllers use `@Valid` on request bodies and parameters; `MethodArgumentNotValidException` is handled by `GlobalExceptionHandler` (or equivalent) in each service → **400 Bad Request** with validation error details (field-level errors can be returned to the client for form/API consumption).
+When a query or header value is suspicious:
 
-**Rejection**: **400 Bad Request** (or **422 Unprocessable Entity** if the project standard reserves 422 for semantic/validation errors). Invalid requests are rejected by the service; the gateway does not inspect body content (no body buffering in gateway).
+- The gateway returns `400 Bad Request`.
+- The response body is:
 
----
+  ```json
+  {"error":"Invalid or suspicious input"}
+  ```
 
-## 2. Validation middleware (T1.7)
+- The request is not proxied to the backend.
+- A `SUSPICIOUS_INPUT` event is emitted when audit/IDS configuration is enabled.
+- The response does not expose which exact pattern matched.
+- The event does not include the raw input value.
 
-| Layer | Component | Order | Applies schema | Rejection |
-|-------|-----------|--------|----------------|-----------|
-| **Gateway** | **InputValidationFilter** | -80 | Injection detection (query + headers) | 400, request not proxied |
-| **Services** | `@Valid` + exception handlers | N/A | Structural (body, path, query) | 400/422 |
+## Configuration
 
-- **InputValidationFilter** is the gateway **validation middleware** that enforces the injection detection schema on every non-excluded request. It runs after `RateLimitFilter` (-90) and before `RbacAuthorizationFilter` (-50).
-- **Excluded paths**: e.g. `/actuator/health`; configurable via `input-validation.excluded-paths`.
-- **Configuration**: `input-validation.enabled` (default `true`), `input-validation.excluded-paths`. See `application.yml` and GATEWAY-HTTPS.md §7.
+| Property | Default | Purpose |
+|----------|---------|---------|
+| `input-validation.enabled` | `true` | Enables the gateway validation filter |
+| `input-validation.excluded-paths` | `/actuator/health` | Path prefixes skipped by the filter |
 
----
+Environment variable:
 
-## 3. Rejet des requêtes invalides (T1.7)
+```text
+INPUT_VALIDATION_ENABLED
+```
 
-- **Requêtes invalides** (query/header contenant des motifs SQLi/XSS) : rejetées par le **gateway** avec **400** ; la requête n’est pas transmise au backend.
-- **Requêtes invalides** (body ou paramètres ne respectant pas les contraintes métier) : rejetées par le **service** avec **400** (ou **422**) après parsing et validation Bean Validation.
+## Service Structural Validation
 
-Aucune requête ne contourne la validation du gateway pour les entrées query/headers ; les bodies sont validés par les services.
+Microservices use Bean Validation annotations on DTOs and controller arguments, such as:
+
+- `@Valid`
+- `@NotNull`
+- `@NotBlank`
+- `@Size`
+- `@Email`
+- `@Pattern`
+
+Invalid JSON bodies or DTO fields are rejected by service-level exception handlers with `400 Bad Request`.
+
+Examples:
+
+- `PatientCreateRequest`
+- `LoginRequest`
+- `RegisterRequest`
+- `AppointmentCreateRequest`
+- `MedicalEntryDTO`
+- `ConsultationCreateRequest`
+
+## Filter Order
+
+The gateway validation filter runs after rate limiting and before RBAC:
+
+| Filter | Order |
+|--------|-------|
+| `AuthenticationFilter` | `-100` |
+| `BruteforceByIpFilter` | `-92` |
+| `RateLimitFilter` | `-90` |
+| `InputValidationFilter` | `-80` |
+| `RbacAuthorizationFilter` | `-50` |
+
+This means invalid input is rejected before protected backend business logic is reached.
